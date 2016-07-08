@@ -120,6 +120,7 @@ function Map (obs, lambda) {
       // clean up cache
       Array.from(lastValues.keys()).filter(notIncluded, obs).forEach(deleteEntry, lastValues)
       items.length = getLength(obs)
+      values.length = items.length
     }
 
     return changed
