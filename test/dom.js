@@ -1,12 +1,16 @@
 var Struct = require('../struct')
 var send = require('../send')
 var h = require('../html-element')
+var computed = require('../computed')
+var when = require('../when')
 
 var state = Struct({
   text: 'Test',
   color: 'red',
   value: 0
 })
+
+var isBlue = computed([state.color], color => color === 'blue')
 
 var element = h('div.cool', {
   classList: ['cool', state.text],
@@ -18,9 +22,15 @@ var element = h('div.cool', {
     state.text, ' ', state.value, ' ', h('strong', 'test')
   ]),
   h('div', [
-    h('button', {
-      'ev-click': send(state.color.set, 'blue')
-    }, 'Change color')
+    when(isBlue,
+      h('button', {
+        'ev-click': send(state.color.set, 'red')
+      }, 'Change color to red'),
+      h('button', {
+        'ev-click': send(state.color.set, 'blue')
+      }, 'Change color to blue')
+    )
+
   ])
 ])
 
