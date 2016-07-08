@@ -9,7 +9,7 @@ var state = Struct({
 })
 
 var element = h('div.cool', {
-  class: ['cool', state.text],
+  classList: ['cool', state.text],
   style: {
     'background-color': state.color
   }
