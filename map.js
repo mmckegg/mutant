@@ -196,14 +196,17 @@ function getLength (target) {
 }
 
 function notIncluded (value) {
-  if (typeof this === 'function' && !value.includes) {
+  if (this.includes) {
+    return !this.includes(value)
+  } else if (this.indexOf) {
+    return !~this.indexOf(value)
+  } else if (typeof this === 'function') {
     var array = this()
     if (array && array.includes) {
-      array.includes(value)
+      return !array.includes(value)
     }
-  } else {
-    return !this.includes(value)
   }
+  return true
 }
 
 function deleteEntry (entry) {
