@@ -1,17 +1,29 @@
 /* A lazy binding take on computed */
-// doesn't start watching observables until itself is watched, and then releases if unwatched
-// avoids memory/watcher leakage
+// - doesn't start watching observables until itself is watched, and then releases if unwatched
+// - avoids memory/watcher leakage
+// - attaches to inner observables if these are returned from value
+// - doesn't broadcast if value is same as last value (and is `value type` or observable, can't make assuptions about reference types)
 
 var resolve = require('./resolve')
+var isObservable = require('./is-observable')
 
 module.exports = computed
 
 function computed (observables, lambda) {
+  if (!Array.isArray(observables)) {
+    observables = [observables]
+  }
+
   var values = []
   var releases = []
   var computedValue = null
+
+  var inner = null
+  var releaseInner = null
+
   var live = false
   var lazy = false
+  var initialized = false
   var listeners = []
 
   var result = function (listener) {
@@ -50,6 +62,9 @@ function computed (observables, lambda) {
           releases.push(observables[i](onUpdate))
         }
       }
+      if (inner) {
+        releaseInner = inner(onInnerUpdate)
+      }
       live = true
       lazy = true
     }
@@ -58,6 +73,12 @@ function computed (observables, lambda) {
   function unlisten () {
     if (live) {
       live = false
+
+      if (releaseInner) {
+        releaseInner()
+        releaseInner = null
+      }
+
       while (releases.length) {
         releases.pop()()
       }
@@ -74,14 +95,38 @@ function computed (observables, lambda) {
       }
     }
 
-    if (changed) {
+    if (changed || !initialized) {
+      initialized = true
       var newComputedValue = lambda.apply(null, values)
-      if (newComputedValue !== computedValue || typeof newComputedValue === 'object') {
-        computedValue = newComputedValue
+      if (newComputedValue !== computedValue || (typeof newComputedValue === 'object' && !isObservable(newComputedValue))) {
+        if (releaseInner) {
+          releaseInner()
+          inner = releaseInner = null
+        }
+
+        if (isObservable(newComputedValue)) {
+          // handle returning observable from computed
+          computedValue = newComputedValue()
+          inner = newComputedValue
+          if (live) {
+            releaseInner = inner(onInnerUpdate)
+          }
+        } else {
+          computedValue = newComputedValue
+        }
         return true
       }
     }
     return false
+  }
+
+  function onInnerUpdate (value) {
+    if (value !== computedValue || typeof newComputedValue === 'object') {
+      computedValue = value
+      for (var i = 0, len = listeners.length; i < len; i++) {
+        listeners[i](computedValue)
+      }
+    }
   }
 
   function onUpdate () {
