@@ -33,13 +33,12 @@ function Element (document, namespace, tagName, properties, children) {
     ? document.createElementNS(namespace, tag.tagName)
     : document.createElement(tag.tagName)
 
-  if (!namespace) {
-    if (tag.id) {
-      node.id = tag.id
-    }
-    if (tag.classes && tag.classes.length) {
-      node.className = tag.classes.join(' ')
-    }
+  if (tag.id) {
+    node.id = tag.id
+  }
+
+  if (tag.classes && tag.classes.length) {
+    node.className = tag.classes.join(' ')
   }
 
   var data = {
@@ -48,7 +47,7 @@ function Element (document, namespace, tagName, properties, children) {
   }
 
   caches.set(node, data)
-  applyProperties(node, properties, namespace)
+  applyProperties(node, properties)
   if (children != null) {
     appendChild(document, node, data, children)
   }
