@@ -1,8 +1,8 @@
 var Value = require('./value')
 
-module.exports = Varhash
+module.exports = Dict
 
-function Varhash (defaultValues) {
+function Dict (defaultValues) {
   var object = Object.create({})
   var sources = []
   var releases = []
