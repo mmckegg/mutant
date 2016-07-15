@@ -58,7 +58,7 @@ function computed (observables, lambda) {
   function listen () {
     if (!live) {
       for (var i = 0, len = observables.length; i < len; i++) {
-        if (typeof observables[i] === 'function') {
+        if (isObservable(observables[i])) {
           releases.push(observables[i](onUpdate))
         }
       }
@@ -89,7 +89,7 @@ function computed (observables, lambda) {
     var changed = false
     for (var i = 0, len = observables.length; i < len; i++) {
       var newValue = resolve(observables[i])
-      if (newValue !== values[i] || typeof newValue === 'object') {
+      if (newValue !== values[i] || isReferenceType(newValue)) {
         changed = true
         values[i] = newValue
       }
@@ -98,7 +98,7 @@ function computed (observables, lambda) {
     if (changed || !initialized) {
       initialized = true
       var newComputedValue = lambda.apply(null, values)
-      if (newComputedValue !== computedValue || (typeof newComputedValue === 'object' && !isObservable(newComputedValue))) {
+      if (newComputedValue !== computedValue || (isReferenceType(newComputedValue) && !isObservable(newComputedValue))) {
         if (releaseInner) {
           releaseInner()
           inner = releaseInner = null
@@ -121,7 +121,7 @@ function computed (observables, lambda) {
   }
 
   function onInnerUpdate (value) {
-    if (value !== computedValue || typeof newComputedValue === 'object') {
+    if (value !== computedValue || isReferenceType(computedValue)) {
       computedValue = value
       for (var i = 0, len = listeners.length; i < len; i++) {
         listeners[i](computedValue)
@@ -144,4 +144,8 @@ function computed (observables, lambda) {
     }
     return computedValue
   }
+}
+
+function isReferenceType (value) {
+  return typeof value === 'object' && value !== null
 }
