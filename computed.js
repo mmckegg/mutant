@@ -2,12 +2,15 @@
 // - doesn't start watching observables until itself is watched, and then releases if unwatched
 // - avoids memory/watcher leakage
 // - attaches to inner observables if these are returned from value
-// - doesn't broadcast if value is same as last value (and is `value type` or observable, can't make assuptions about reference types)
+// - doesn't broadcast if value is same as last value (and is `value type` or observable - can't make assuptions about reference types)
+// - doesn't broadcast if value is computed.NO_CHANGE
 
 var resolve = require('./resolve')
 var isObservable = require('./is-observable')
 
 module.exports = computed
+
+computed.NO_CHANGE = {}
 
 function computed (observables, lambda) {
   if (!Array.isArray(observables)) {
@@ -98,6 +101,11 @@ function computed (observables, lambda) {
     if (changed || !initialized) {
       initialized = true
       var newComputedValue = lambda.apply(null, values)
+
+      if (newComputedValue === computed.NO_CHANGE) {
+        return false
+      }
+
       if (newComputedValue !== computedValue || (isReferenceType(newComputedValue) && !isObservable(newComputedValue))) {
         if (releaseInner) {
           releaseInner()
