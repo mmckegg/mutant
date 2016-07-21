@@ -86,6 +86,7 @@ function bind (document, obs, data) {
 }
 
 function replace (oldNodes, newNodes) {
+  // TODO: optmize to not reinsert nodes that are already in correct position!
   var parent = oldNodes[oldNodes.length - 1].parentNode
   var marker = oldNodes[oldNodes.length - 1].nextSibling
   oldNodes.filter(function (node) {
