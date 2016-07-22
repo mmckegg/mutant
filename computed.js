@@ -131,17 +131,13 @@ function computed (observables, lambda) {
   function onInnerUpdate (value) {
     if (value !== computedValue || isReferenceType(computedValue)) {
       computedValue = value
-      for (var i = 0, len = listeners.length; i < len; i++) {
-        listeners[i](computedValue)
-      }
+      broadcast(listeners, computedValue)
     }
   }
 
   function onUpdate () {
     if (update()) {
-      for (var i = 0, len = listeners.length; i < len; i++) {
-        listeners[i](computedValue)
-      }
+      broadcast(listeners, computedValue)
     }
   }
 
@@ -156,4 +152,12 @@ function computed (observables, lambda) {
 
 function isReferenceType (value) {
   return typeof value === 'object' && value !== null
+}
+
+function broadcast (listeners, value) {
+  // cache listeners in case modified during broadcast
+  listeners = listeners.slice(0)
+  for (var i = 0, len = listeners.length; i < len; i++) {
+    listeners[i](value)
+  }
 }

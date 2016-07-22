@@ -155,8 +155,9 @@ function Map (obs, lambda) {
   }
 
   function broadcast () {
-    for (var i = 0, len = listeners.length; i < len; i++) {
-      listeners[i](values)
+    var cachedListeners = listeners.slice(0)
+    for (var i = 0, len = cachedListeners.length; i < len; i++) {
+      cachedListeners[i](values)
     }
   }
 

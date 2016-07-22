@@ -7,8 +7,9 @@ function Observable (value) {
   observable.set = function (v) {
     value = v
 
-    for (var i = 0, len = listeners.length; i < len; i++) {
-      listeners[i](v)
+    var cachedListeners = listeners.slice(0)
+    for (var i = 0, len = cachedListeners.length; i < len; i++) {
+      cachedListeners[i](v)
     }
   }
 
