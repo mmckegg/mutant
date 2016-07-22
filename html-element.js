@@ -12,12 +12,8 @@ module.exports.forDocument = function (document, namespace) {
 }
 
 module.exports.destroy = function (node) {
-  var data = caches.get(node)
-  if (data) {
-    Array.from(data.releases.values()).forEach(tryInvoke)
-    caches.delete(node)
-  }
-  applyProperties.destroy(node)
+  unbind(node)
+  caches.delete(node)
 }
 
 function Element (document, namespace, tagName, properties, children) {
@@ -43,13 +39,19 @@ function Element (document, namespace, tagName, properties, children) {
 
   var data = {
     targets: new Map(),
-    releases: new Map()
+    bindings: []
   }
 
   caches.set(node, data)
-  applyProperties(node, properties)
+  var hooks = applyProperties(node, properties, data)
   if (children != null) {
     appendChild(document, node, data, children)
+  }
+
+  if (Array.isArray(hooks)) {
+    hooks.forEach(function (v) {
+      data.bindings.push(new HookBinding(v, node))
+    })
   }
 
   return node
@@ -64,7 +66,7 @@ function appendChild (document, target, data, node) {
     var nodes = getNodes(document, resolve(node))
     nodes.forEach(append, target)
     data.targets.set(node, nodes)
-    data.releases.set(node, bind(document, node, data))
+    data.bindings.push(new Binding(bind, document, node, data))
   } else {
     target.appendChild(getNode(document, node))
   }
@@ -93,6 +95,7 @@ function replace (oldNodes, newNodes) {
     return !~newNodes.indexOf(node)
   }).forEach(function (node) {
     parent.removeChild(node)
+    unbind(node)
   })
   if (marker) {
     newNodes.forEach(function (node) {
@@ -101,6 +104,7 @@ function replace (oldNodes, newNodes) {
   } else {
     newNodes.forEach(function (node) {
       parent.appendChild(node)
+      rebind(node)
     })
   }
 }
@@ -139,6 +143,38 @@ function getNodes (document, nodeOrNodes) {
   }
 }
 
+function rebind (node) {
+  if (node.nodeType === 1) {
+    var data = caches.get(node)
+    if (data) {
+      data.bindings.forEach(invokeBind)
+    }
+    for (var i = 0; i < node.childNodes.length; i++) {
+      rebind(node.childNodes[i])
+    }
+  }
+}
+
+function unbind (node) {
+  if (node.nodeType === 1) {
+    var data = caches.get(node)
+    if (data) {
+      data.bindings.forEach(invokeUnbind)
+    }
+    for (var i = 0; i < node.childNodes.length; i++) {
+      unbind(node.childNodes[i])
+    }
+  }
+}
+
+function invokeBind (binding) {
+  binding.bind()
+}
+
+function invokeUnbind (binding) {
+  binding.unbind()
+}
+
 function push (item) {
   this.push(item)
 }
@@ -150,5 +186,51 @@ function resolve (source) {
 function tryInvoke (func) {
   if (typeof func === 'function') {
     func()
+  }
+}
+
+function HookBinding (fn, element) {
+  this.element = element
+  this.fn = fn
+  this.bind()
+}
+
+HookBinding.prototype = {
+  bind: function () {
+    if (!this.bound) {
+      this._release = this.fn(this.element)
+      this.bound = true
+    }
+  },
+  unbind: function () {
+    if (this.bound && typeof this._release === 'function') {
+      this._release()
+      this._release = null
+      this.bound = false
+    }
+  }
+}
+
+function Binding (fn, document, obs, data) {
+  this.document = document
+  this.obs = obs
+  this.data = data
+  this.fn = fn
+  this.bind()
+}
+
+Binding.prototype = {
+  bind: function () {
+    if (!this.bound) {
+      this._release = this.fn(this.document, this.obs, this.data)
+      this.bound = true
+    }
+  },
+  unbind: function () {
+    if (this.bound && typeof this._release === 'function') {
+      this._release()
+      this._release = null
+      this.bound = false
+    }
   }
 }
