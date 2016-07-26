@@ -1,5 +1,4 @@
 var resolve = require('./resolve')
-var computed = require('./computed')
 
 module.exports = Map
 
