@@ -60,6 +60,10 @@ function Set (defaultValues) {
     refresh()
   }
 
+  observable.getLength = function () {
+    return sources.length
+  }
+
   observable.destroy = observable.clear
 
   return observable
