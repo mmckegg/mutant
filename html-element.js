@@ -1,7 +1,10 @@
 var applyProperties = require('./lib/apply-properties')
 var isObservable = require('./is-observable')
 var parseTag = require('./lib/parse-tag')
+var walk = require('./lib/walk')
+var watch = require('./watch')
 var caches = new global.WeakMap()
+var watcher = null
 
 module.exports = function (tag, attributes, children) {
   return Element(global.document, null, tag, attributes, children)
@@ -11,17 +14,13 @@ module.exports.forDocument = function (document, namespace) {
   return Element.bind(this, document, namespace)
 }
 
-module.exports.destroy = function (node) {
-  unbind(node)
-  caches.delete(node)
-}
-
 function Element (document, namespace, tagName, properties, children) {
   if (!children && (Array.isArray(properties) || isText(properties))) {
     children = properties
     properties = null
   }
 
+  checkWatcher(document)
   properties = properties || {}
 
   var tag = parseTag(tagName, properties, namespace)
@@ -43,15 +42,9 @@ function Element (document, namespace, tagName, properties, children) {
   }
 
   caches.set(node, data)
-  var hooks = applyProperties(node, properties, data)
+  applyProperties(node, properties, data)
   if (children != null) {
     appendChild(document, node, data, children)
-  }
-
-  if (Array.isArray(hooks)) {
-    hooks.forEach(function (v) {
-      data.bindings.push(new HookBinding(v, node))
-    })
   }
 
   return node
@@ -68,16 +61,48 @@ function appendChild (document, target, data, node) {
     data.targets.set(node, nodes)
     data.bindings.push(new Binding(bind, document, node, data))
   } else {
-    target.appendChild(getNode(document, node))
+    node = getNode(document, node)
+    target.appendChild(node)
+    walk(node, rebind)
   }
 }
 
 function append (child) {
   this.appendChild(child)
+  walk(child, rebind)
+}
+
+function checkWatcher (document) {
+  if (!watcher && global.MutationObserver) {
+    watcher = new global.MutationObserver(onMutate)
+    watcher.observe(document, {subtree: true, childList: true})
+  }
+}
+
+function onMutate (changes) {
+  changes.forEach(handleChange)
+}
+
+function handleChange (change) {
+  for (var i = 0; i < change.addedNodes.length; i++) {
+    // if parent is a mutant element, then safe to assume it has already been bound
+    var node = change.addedNodes[i]
+    if (!caches.has(node.parentNode)) {
+      walk(node, rebind)
+    }
+  }
+  for (var i = 0; i < change.removedNodes.length; i++) {
+    // if has already been unbound, safe to assume children have also
+    var node = change.removedNodes[i]
+    var data = caches.get(node)
+    if (data && data.bound) {
+      walk(node, unbind)
+    }
+  }
 }
 
 function bind (document, obs, data) {
-  return obs(function (value) {
+  return watch(obs, function (value) {
     var oldNodes = data.targets.get(obs)
     var newNodes = getNodes(document, value)
     if (oldNodes) {
@@ -95,16 +120,17 @@ function replace (oldNodes, newNodes) {
     return !~newNodes.indexOf(node)
   }).forEach(function (node) {
     parent.removeChild(node)
-    unbind(node)
+    walk(node, unbind)
   })
   if (marker) {
     newNodes.forEach(function (node) {
       parent.insertBefore(node, marker)
+      walk(node, rebind)
     })
   } else {
     newNodes.forEach(function (node) {
       parent.appendChild(node)
-      rebind(node)
+      walk(node, rebind)
     })
   }
 }
@@ -149,9 +175,6 @@ function rebind (node) {
     if (data) {
       data.bindings.forEach(invokeBind)
     }
-    for (var i = 0; i < node.childNodes.length; i++) {
-      rebind(node.childNodes[i])
-    }
   }
 }
 
@@ -160,9 +183,6 @@ function unbind (node) {
     var data = caches.get(node)
     if (data) {
       data.bindings.forEach(invokeUnbind)
-    }
-    for (var i = 0; i < node.childNodes.length; i++) {
-      unbind(node.childNodes[i])
     }
   }
 }
@@ -183,40 +203,12 @@ function resolve (source) {
   return typeof source === 'function' ? source() : source
 }
 
-function tryInvoke (func) {
-  if (typeof func === 'function') {
-    func()
-  }
-}
-
-function HookBinding (fn, element) {
-  this.element = element
-  this.fn = fn
-  this.bind()
-}
-
-HookBinding.prototype = {
-  bind: function () {
-    if (!this.bound) {
-      this._release = this.fn(this.element)
-      this.bound = true
-    }
-  },
-  unbind: function () {
-    if (this.bound && typeof this._release === 'function') {
-      this._release()
-      this._release = null
-      this.bound = false
-    }
-  }
-}
-
 function Binding (fn, document, obs, data) {
   this.document = document
   this.obs = obs
   this.data = data
   this.fn = fn
-  this.bind()
+  this.bound = false
 }
 
 Binding.prototype = {
