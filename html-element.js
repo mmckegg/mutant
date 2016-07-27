@@ -112,27 +112,40 @@ function bind (document, obs, data) {
   })
 }
 
+function indexOf (target, item) {
+  return Array.prototype.indexOf.call(target, item)
+}
+
 function replace (oldNodes, newNodes) {
-  // TODO: optmize to not reinsert nodes that are already in correct position!
   var parent = oldNodes[oldNodes.length - 1].parentNode
-  var marker = oldNodes[oldNodes.length - 1].nextSibling
+  var nodes = parent.childNodes
+  var startIndex = indexOf(nodes, oldNodes[0])
+
+  // avoid reinserting nodes that are already in correct position!
+  for (var i = 0; i < newNodes.length; i++) {
+    if (nodes[i + startIndex] === newNodes[i]) {
+      continue
+    } else if (nodes[i + startIndex + 1] === newNodes[i]) {
+      parent.removeChild(nodes[i + startIndex])
+      continue
+    } else if (nodes[i + startIndex] === newNodes[i + 1] && newNodes[i + 1]) {
+      parent.insertBefore(newNodes[i], nodes[i + startIndex])
+    } else if (nodes[i + startIndex]) {
+      parent.insertBefore(newNodes[i], nodes[i + startIndex])
+    } else {
+      parent.appendChild(newNodes[i])
+    }
+    walk(newNodes[i], rebind)
+  }
+
   oldNodes.filter(function (node) {
     return !~newNodes.indexOf(node)
   }).forEach(function (node) {
-    parent.removeChild(node)
+    if (node.parentNode) {
+      parent.removeChild(node)
+    }
     walk(node, unbind)
   })
-  if (marker) {
-    newNodes.forEach(function (node) {
-      parent.insertBefore(node, marker)
-      walk(node, rebind)
-    })
-  } else {
-    newNodes.forEach(function (node) {
-      parent.appendChild(node)
-      walk(node, rebind)
-    })
-  }
 }
 
 function isText (value) {
@@ -153,13 +166,14 @@ function getNodes (document, nodeOrNodes) {
   if (Array.isArray(nodeOrNodes)) {
     if (nodeOrNodes.length) {
       var result = []
-      nodeOrNodes.forEach(function (item) {
+      for (var i = 0; i < nodeOrNodes.length; i++) {
+        var item = nodeOrNodes[i]
         if (Array.isArray(item)) {
           getNodes(document, item).forEach(push, result)
         } else {
           result.push(getNode(document, item))
         }
-      })
+      }
       return result.map(getNode.bind(this, document))
     } else {
       return [getNode(document, null)]
