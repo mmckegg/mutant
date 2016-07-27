@@ -60,6 +60,10 @@ function Set (defaultValues) {
     refresh()
   }
 
+  observable.get = function (index) {
+    return sources[index]
+  }
+
   observable.getLength = function () {
     return sources.length
   }
