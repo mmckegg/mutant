@@ -5,6 +5,7 @@ var walk = require('./lib/walk')
 var watch = require('./watch')
 var caches = new global.WeakMap()
 var watcher = null
+var invalidateNextTick = require('./lib/invalidate-next-tick')
 
 module.exports = function (tag, attributes, children) {
   return Element(global.document, null, tag, attributes, children)
@@ -59,7 +60,7 @@ function appendChild (document, target, data, node) {
     var nodes = getNodes(document, resolve(node))
     nodes.forEach(append, target)
     data.targets.set(node, nodes)
-    data.bindings.push(new Binding(bind, document, node, data))
+    data.bindings.push(new Binding(document, node, data))
   } else {
     node = getNode(document, node)
     target.appendChild(node)
@@ -99,17 +100,6 @@ function handleChange (change) {
       walk(node, unbind)
     }
   }
-}
-
-function bind (document, obs, data) {
-  return watch(obs, function (value) {
-    var oldNodes = data.targets.get(obs)
-    var newNodes = getNodes(document, value)
-    if (oldNodes) {
-      replace(oldNodes, newNodes)
-      data.targets.set(obs, newNodes)
-    }
-  })
 }
 
 function indexOf (target, item) {
@@ -217,18 +207,30 @@ function resolve (source) {
   return typeof source === 'function' ? source() : source
 }
 
-function Binding (fn, document, obs, data) {
+function Binding (document, obs, data) {
   this.document = document
   this.obs = obs
   this.data = data
-  this.fn = fn
   this.bound = false
+  this.invalid = false
+  this.update = function (value) {
+    var oldNodes = data.targets.get(obs)
+    var newNodes = getNodes(document, value)
+    if (oldNodes) {
+      replace(oldNodes, newNodes)
+      data.targets.set(obs, newNodes)
+    }
+  }
+  invalidateNextTick(this)
 }
 
 Binding.prototype = {
   bind: function () {
     if (!this.bound) {
-      this._release = this.fn(this.document, this.obs, this.data)
+      this._release = this.invalid
+        ? watch(this.obs, this.update)
+        : this.obs(this.update)
+      this.invalid = false
       this.bound = true
     }
   },
@@ -237,6 +239,7 @@ Binding.prototype = {
       this._release()
       this._release = null
       this.bound = false
+      invalidateNextTick(this)
     }
   }
 }
