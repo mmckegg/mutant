@@ -2,7 +2,7 @@ var resolve = require('./resolve')
 
 module.exports = Map
 
-function Map (obs, lambda) {
+function Map (obs, lambda, opts) {
   var releases = []
   var live = false
   var lazy = false
@@ -14,6 +14,13 @@ function Map (obs, lambda) {
   var raw = []
   var values = []
   var watches = []
+
+  // incremental update
+  var queue = []
+  var maxTime = null
+  if (opts && opts.maxTime) {
+    maxTime = opts.maxTime
+  }
 
   var result = function MutantMap (listener) {
     if (!listener) {
@@ -94,24 +101,20 @@ function Map (obs, lambda) {
       changed = true
     }
 
+    var startedAt = Date.now()
+
     for (var i = 0, len = getLength(obs); i < len; i++) {
       var item = get(obs, i)
+      var currentItem = items[i]
+      items[i] = item
 
-      if (typeof item === 'object') {
-        items[i] = item
-        raw[i] = lambda(item)
-        values[i] = resolve(raw[i])
-        changed = true
-        rebind(i)
-      } else if (item !== items[i]) {
-        items[i] = item
-        if (!lastValues.has(item)) {
-          lastValues.set(item, lambda(item))
+      if (typeof item === 'object' || item !== currentItem) {
+        if (maxTime && Date.now() - startedAt > maxTime) {
+          queueUpdateItem(i)
+        } else {
+          updateItem(i)
         }
-        raw[i] = lastValues.get(item)
-        values[i] = resolve(raw[i])
         changed = true
-        rebind(i)
       }
     }
 
@@ -123,6 +126,40 @@ function Map (obs, lambda) {
     }
 
     return changed
+  }
+
+  function queueUpdateItem (i) {
+    if (!queue.length) {
+      setImmediate(flushQueue)
+    }
+    if (!~queue.indexOf(i)) {
+      queue.push(i)
+    }
+  }
+
+  function flushQueue () {
+    var startedAt = Date.now()
+    while (queue.length && (!maxTime || Date.now() - startedAt < maxTime)) {
+      updateItem(queue.pop())
+    }
+    broadcast()
+    if (queue.length) {
+      setImmediate(flushQueue)
+    }
+  }
+
+  function updateItem (i) {
+    var item = get(obs, i)
+    if (typeof item === 'object') {
+      raw[i] = lambda(item)
+    } else {
+      if (!lastValues.has(item)) {
+        lastValues.set(item, lambda(item))
+      }
+      raw[i] = lastValues.get(item)
+    }
+    values[i] = resolve(raw[i])
+    rebind(i)
   }
 
   function rebind (index) {
