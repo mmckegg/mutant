@@ -5,13 +5,24 @@ Create observables and map them to DOM elements. Massively inspired by `hyperscr
 
 No virtual dom, just direct observable bindings. Unnecessary garbage collection is avoided by using mutable objects instead of blasting immutable junk all over the place.
 
-## Current Status: Experimental / Unpublished
+## Current Status: Experimental / Maintained
+
+Expect breaking changes.
+
+Being used as primary renderer and data models in [Loop Drop](https://github.com/mmckegg/loop-drop-app).
 
 ## Install
 
 ```bash
 npm install @mmckegg/mutant --save
 ```
+
+## Compatibility
+
+Requires an environment that supports:
+  - `Map` and `WeakMap`
+  - `MutationObserver` (optional, only for root `html-element` binding support)
+  - ES5 arrays
 
 ## Use
 
