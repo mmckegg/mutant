@@ -212,7 +212,7 @@ function Binding (document, obs, data) {
   this.obs = obs
   this.data = data
   this.bound = false
-  this.invalid = false
+  this.invalidated = false
   this.update = function (value) {
     var oldNodes = data.targets.get(obs)
     var newNodes = getNodes(document, value)
@@ -227,10 +227,10 @@ function Binding (document, obs, data) {
 Binding.prototype = {
   bind: function () {
     if (!this.bound) {
-      this._release = this.invalid
+      this._release = this.invalidated
         ? watch(this.obs, this.update)
         : this.obs(this.update)
-      this.invalid = false
+      this.invalidated = false
       this.bound = true
     }
   },
