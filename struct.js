@@ -15,7 +15,7 @@ function Struct (properties) {
   var keys = Object.keys(properties)
   var suspendBroadcast = false
 
-  var releases = keys.forEach(function (key) {
+  var releases = keys.map(function (key) {
     if (blackList.hasOwnProperty(key)) {
       throw new Error("Cannot create a struct with a key named '" + key + "'.\n" + blackList[key])
     }
