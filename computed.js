@@ -12,7 +12,7 @@ module.exports = computed
 
 computed.NO_CHANGE = {}
 
-function computed (observables, lambda) {
+function computed (observables, lambda, opts) {
   if (!Array.isArray(observables)) {
     observables = [observables]
   }
@@ -23,6 +23,7 @@ function computed (observables, lambda) {
 
   var inner = null
   var releaseInner = null
+  var updating = false
 
   var live = false
   var lazy = false
@@ -92,7 +93,7 @@ function computed (observables, lambda) {
     var changed = false
     for (var i = 0, len = observables.length; i < len; i++) {
       var newValue = resolve(observables[i])
-      if (newValue !== values[i] || isReferenceType(newValue)) {
+      if (newValue !== values[i] || isMutable(newValue)) {
         changed = true
         values[i] = newValue
       }
@@ -106,7 +107,7 @@ function computed (observables, lambda) {
         return false
       }
 
-      if (newComputedValue !== computedValue || (isReferenceType(newComputedValue) && !isObservable(newComputedValue))) {
+      if (newComputedValue !== computedValue || (isMutable(newComputedValue) && !isObservable(newComputedValue))) {
         if (releaseInner) {
           releaseInner()
           inner = releaseInner = null
@@ -129,13 +130,25 @@ function computed (observables, lambda) {
   }
 
   function onInnerUpdate (value) {
-    if (value !== computedValue || isReferenceType(computedValue)) {
+    if (value !== computedValue || isMutable(computedValue)) {
       computedValue = value
       broadcast(listeners, computedValue)
     }
   }
 
   function onUpdate () {
+    if (opts && opts.nextTick) {
+      if (!updating) {
+        updating = true
+        setImmediate(updateNow)
+      }
+    } else {
+      updateNow()
+    }
+  }
+
+  function updateNow () {
+    updating = false
     if (update()) {
       broadcast(listeners, computedValue)
     }
@@ -147,6 +160,14 @@ function computed (observables, lambda) {
       update()
     }
     return computedValue
+  }
+
+  function isMutable (value) {
+    if (opts && opts.immutableTypes && opts.immutableTypes.some(type => value instanceof type)) {
+      return false
+    } else {
+      return isReferenceType(value)
+    }
   }
 }
 
