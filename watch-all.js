@@ -3,12 +3,14 @@ var isObservable = require('./is-observable')
 
 module.exports = watchAll
 
-function watchAll (observables, listener) {
+function watchAll (observables, listener, opts) {
   if (!Array.isArray(observables)) {
     observables = [ observables ]
   }
 
+  var broadcasting = false
   var releases = observables.map(bind, broadcast)
+
   broadcast()
 
   return function () {
@@ -17,6 +19,18 @@ function watchAll (observables, listener) {
   }
 
   function broadcast () {
+    if (opts && opts.nextTick) {
+      if (!broadcasting) {
+        broadcasting = true
+        setImmediate(broadcastNow)
+      }
+    } else {
+      broadcastNow()
+    }
+  }
+
+  function broadcastNow () {
+    broadcasting = false
     listener.apply(this, observables.map(resolve))
   }
 }
