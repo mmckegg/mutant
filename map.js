@@ -1,12 +1,11 @@
 var resolve = require('./resolve')
+var LazyWatcher = require('./lib/lazy-watcher')
 
 module.exports = Map
 
 function Map (obs, lambda, opts) {
   var releases = []
-  var live = false
-  var lazy = false
-  var listeners = []
+  var binder = LazyWatcher(update, listen, unlisten)
 
   var lastValues = new global.Map()
   var items = []
@@ -14,6 +13,8 @@ function Map (obs, lambda, opts) {
   var raw = []
   var values = []
   var watches = []
+
+  binder.value = values
 
   // incremental update
   var queue = []
@@ -24,27 +25,9 @@ function Map (obs, lambda, opts) {
 
   var result = function MutantMap (listener) {
     if (!listener) {
-      return getValue()
+      return binder.getValue()
     }
-
-    if (typeof listener !== 'function') {
-      throw new Error('Listeners must be functions.')
-    }
-
-    listeners.push(listener)
-    listen()
-
-    return function remove () {
-      for (var i = 0, len = listeners.length; i < len; i++) {
-        if (listeners[i] === listener) {
-          listeners.splice(i, 1)
-          break
-        }
-      }
-      if (!listeners.length) {
-        unlisten()
-      }
-    }
+    return binder.addListener(listener)
   }
 
   result.get = function (index) {
@@ -68,30 +51,17 @@ function Map (obs, lambda, opts) {
   // scoped
 
   function listen () {
-    if (!live) {
-      live = true
-      lazy = true
-      if (typeof obs === 'function') {
-        releases.push(obs(onUpdate))
-      }
-      rebindAll()
+    if (typeof obs === 'function') {
+      releases.push(obs(binder.onUpdate))
     }
+    rebindAll()
   }
 
   function unlisten () {
-    if (live) {
-      live = false
-      while (releases.length) {
-        releases.pop()()
-      }
-      rebindAll()
+    while (releases.length) {
+      releases.pop()()
     }
-  }
-
-  function onUpdate () {
-    if (update()) {
-      broadcast()
-    }
+    rebindAll()
   }
 
   function update () {
@@ -142,7 +112,7 @@ function Map (obs, lambda, opts) {
     while (queue.length && (!maxTime || Date.now() - startedAt < maxTime)) {
       updateItem(queue.pop())
     }
-    broadcast()
+    binder.broadcast()
     if (queue.length) {
       setImmediate(flushQueue)
     }
@@ -168,7 +138,7 @@ function Map (obs, lambda, opts) {
       watches[index] = null
     }
 
-    if (live) {
+    if (binder.live) {
       if (typeof raw[index] === 'function') {
         watches[index] = updateValue(raw[index], index)
       }
@@ -185,24 +155,9 @@ function Map (obs, lambda, opts) {
     return obs(function (value) {
       if (values[index] !== value || typeof value === 'object') {
         values[index] = value
-        broadcast()
+        binder.broadcast()
       }
     })
-  }
-
-  function broadcast () {
-    var cachedListeners = listeners.slice(0)
-    for (var i = 0, len = cachedListeners.length; i < len; i++) {
-      cachedListeners[i](values)
-    }
-  }
-
-  function getValue () {
-    if (!live || lazy) {
-      lazy = false
-      update()
-    }
-    return values
   }
 }
 

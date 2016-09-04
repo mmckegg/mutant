@@ -1,4 +1,6 @@
 var Value = require('./value')
+var LazyWatcher = require('./lib/lazy-watcher')
+var isReferenceType = require('./lib/is-reference-type')
 
 module.exports = Struct
 
@@ -10,12 +12,21 @@ var blackList = {
 
 function Struct (properties) {
   var object = Object.create({})
-  var observable = Value(object)
-  var broadcast = observable.set
+  var releases = []
+  var binder = LazyWatcher(update, listen, unlisten)
+  binder.value = object
+
+  var observable = function MutantStruct (listener) {
+    if (!listener) {
+      return binder.getValue()
+    }
+    return binder.addListener(listener)
+  }
+
   var keys = Object.keys(properties)
   var suspendBroadcast = false
 
-  var releases = keys.map(function (key) {
+  keys.forEach(function (key) {
     if (blackList.hasOwnProperty(key)) {
       throw new Error("Cannot create a struct with a key named '" + key + "'.\n" + blackList[key])
     }
@@ -26,20 +37,7 @@ function Struct (properties) {
 
     object[key] = obs()
     observable[key] = obs
-
-    return obs(function (val) {
-      object[key] = val
-      if (!suspendBroadcast) {
-        broadcast(object)
-      }
-    })
   })
-
-  observable.destroy = function () {
-    while (releases.length) {
-      releases.pop()()
-    }
-  }
 
   observable.set = function (values) {
     var lastValue = suspendBroadcast
@@ -62,9 +60,43 @@ function Struct (properties) {
 
     suspendBroadcast = lastValue
     if (!suspendBroadcast) {
-      broadcast(object)
+      binder.broadcast()
     }
   }
 
   return observable
+
+  // scoped
+
+  function listen () {
+    keys.map(function (key) {
+      var obs = observable[key]
+      releases.push(obs(function (val) {
+        if (val !== object[key] || isReferenceType(val)) {
+          object[key] = val
+          if (!suspendBroadcast) {
+            binder.broadcast(object)
+          }
+        }
+      }))
+    })
+  }
+
+  function unlisten () {
+    while (releases.length) {
+      releases.pop()()
+    }
+  }
+
+  function update () {
+    var changed = false
+    keys.forEach(function (key) {
+      var newValue = observable[key]()
+      if (newValue !== object[key] || isReferenceType(newValue)) {
+        object[key] = observable[key]()
+        changed = true
+      }
+    })
+    return changed
+  }
 }

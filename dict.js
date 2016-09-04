@@ -1,4 +1,8 @@
-var Value = require('./value')
+var LazyWatcher = require('./lib/lazy-watcher')
+var isReferenceType = require('./lib/is-reference-type')
+var resolve = require('./resolve')
+
+// TODO: reimplement using LazyWatcher
 
 module.exports = Dict
 
@@ -7,18 +11,25 @@ function Dict (defaultValues) {
   var sources = []
   var releases = []
 
+  var binder = LazyWatcher(update, listen, unlisten)
+  binder.value = object
+
   if (defaultValues) {
     Object.keys(defaultValues).forEach(function (key) {
       put(key, defaultValues[key])
     })
   }
 
-  var observable = Value(object)
-  var broadcast = observable.set
+  var observable = function MutantDictionary (listener) {
+    if (!listener) {
+      return binder.getValue()
+    }
+    return binder.addListener(listener)
+  }
 
   observable.put = function (key, valueOrObs) {
     put(key, valueOrObs)
-    broadcast(object)
+    binder.broadcast()
   }
 
   observable.get = function (key) {
@@ -36,7 +47,7 @@ function Dict (defaultValues) {
       delete releases[key]
       delete object[key]
     })
-    broadcast(object)
+    binder.broadcast()
   }
 
   observable.delete = function (key) {
@@ -44,7 +55,7 @@ function Dict (defaultValues) {
     delete sources[key]
     delete releases[key]
     delete object[key]
-    broadcast(object)
+    binder.broadcast()
   }
 
   observable.includes = function (valueOrObs) {
@@ -63,10 +74,8 @@ function Dict (defaultValues) {
       put(key, values[key])
     })
 
-    broadcast(object)
+    binder.broadcast()
   }
-
-  observable.destroy = observable.clear
 
   return observable
 
@@ -75,22 +84,45 @@ function Dict (defaultValues) {
   function put (key, valueOrObs) {
     tryInvoke(releases[key])
     sources[key] = valueOrObs
-    releases[key] = bind(key, valueOrObs)
+    if (binder.live) {
+      releases[key] = bind(key, valueOrObs)
+    }
     object[key] = resolve(valueOrObs)
   }
 
   function bind (key, valueOrObs) {
-    return typeof valueOrObs === 'function' ? valueOrObs(update.bind(this, key)) : null
+    return typeof valueOrObs === 'function' ? valueOrObs(updateKey.bind(this, key)) : null
   }
 
-  function update (key, value) {
+  function updateKey (key, value) {
     object[key] = value
-    broadcast(object)
+    binder.broadcast()
   }
-}
 
-function resolve (source) {
-  return typeof source === 'function' ? source() : source
+  function listen () {
+    Object.keys(sources).forEach(function (key) {
+      releases[key] = bind(sources[key])
+    })
+  }
+
+  function unlisten () {
+    Object.keys(sources).forEach(function (key) {
+      tryInvoke(releases[key])
+      delete releases[key]
+    })
+  }
+
+  function update () {
+    var changed = false
+    Object.keys(sources).forEach(function (key) {
+      var newValue = resolve(sources[key])
+      if (newValue !== object[key] || isReferenceType(newValue)) {
+        object[key] = newValue
+        changed = true
+      }
+    })
+    return changed
+  }
 }
 
 function tryInvoke (func) {

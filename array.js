@@ -1,4 +1,6 @@
-var Value = require('./value')
+var LazyWatcher = require('./lib/lazy-watcher')
+var isReferenceType = require('./lib/is-reference-type')
+var resolve = require('./resolve')
 
 module.exports = Array
 
@@ -7,25 +9,32 @@ function Array (defaultValues) {
   var sources = []
   var releases = []
 
+  var binder = LazyWatcher(update, listen, unlisten)
+  binder.value = object
+
   if (defaultValues && defaultValues.length) {
     defaultValues.forEach(add)
   }
 
-  var observable = Value(object)
-  var broadcast = observable.set
+  var observable = function MutantArray (listener) {
+    if (!listener) {
+      return binder.getValue()
+    }
+    return binder.addListener(listener)
+  }
 
   observable.push = function (args) {
     for (var i = 0; i < arguments.length; i++) {
       add(arguments[i])
     }
-    broadcast(object)
+    binder.broadcast()
   }
 
   observable.insert = function (valueOrObs, at) {
     sources.splice(at, 0, valueOrObs)
-    releases.splice(at, 0, bind(valueOrObs))
+    if (binder.live) releases.splice(at, 0, bind(valueOrObs))
     object.splice(at, 0, resolve(valueOrObs))
-    broadcast(object)
+    binder.broadcast()
   }
 
   observable.get = function (index) {
@@ -48,17 +57,17 @@ function Array (defaultValues) {
 
   observable.pop = function () {
     var result = sources.pop()
-    tryInvoke(releases.pop())
+    if (binder.live) tryInvoke(releases.pop())
     object.pop()
-    broadcast(object)
+    binder.broadcast()
     return result
   }
 
   observable.shift = function () {
     var result = sources.shift()
-    tryInvoke(releases.shift())
+    if (binder.live) tryInvoke(releases.shift())
     object.shift()
-    broadcast(object)
+    binder.broadcast()
     return result
   }
 
@@ -67,29 +76,30 @@ function Array (defaultValues) {
     sources.length = 0
     releases.length = 0
     object.length = 0
-    broadcast(object)
+    binder.broadcast()
   }
 
   observable.delete = function (valueOrObs) {
     var index = sources.indexOf(valueOrObs)
     if (~index) {
       sources.splice(index, 1)
-      releases.splice(index, 1).forEach(tryInvoke)
+      if (binder.live) releases.splice(index, 1).forEach(tryInvoke)
       object.splice(index, 1)
-      broadcast(object)
+      binder.broadcast()
     }
   }
 
   observable.set = function (values) {
-    releases.forEach(tryInvoke)
+    unlisten()
     sources.length = 0
     releases.length = 0
     object.length = 0
     values.forEach(add)
-    broadcast(object)
+    if (binder.live) {
+      listen()
+      binder.broadcast()
+    }
   }
-
-  observable.destroy = observable.clear
 
   return observable
 
@@ -97,26 +107,38 @@ function Array (defaultValues) {
 
   function add (valueOrObs) {
     sources.push(valueOrObs)
-    releases.push(bind(valueOrObs))
+    if (binder.live) {
+      releases.push(bind(valueOrObs))
+    }
     object.push(resolve(valueOrObs))
   }
 
   function bind (valueOrObs) {
-    return typeof valueOrObs === 'function' ? valueOrObs(update.bind(this, valueOrObs)) : null
+    return typeof valueOrObs === 'function' ? valueOrObs(binder.onUpdate) : null
   }
 
-  function update (obs, value) {
-    sources.forEach(function (source, i) {
-      if (source === obs) {
-        object[i] = value
+  function listen () {
+    sources.forEach(function (obs, i) {
+      releases[i] = bind(obs)
+    })
+  }
+
+  function unlisten () {
+    releases.forEach(tryInvoke)
+    releases.length = 0
+  }
+
+  function update () {
+    var changed = false
+    sources.forEach(function (key, i) {
+      var newValue = resolve(observable[key])
+      if (newValue !== object[i] || isReferenceType(newValue)) {
+        object[i] = newValue
+        changed = true
       }
     })
-    broadcast(object)
+    return changed
   }
-}
-
-function resolve (source) {
-  return typeof source === 'function' ? source() : source
 }
 
 function tryInvoke (func) {

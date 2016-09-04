@@ -10,11 +10,9 @@ var struct = Struct({
 })
 
 console.log(struct())
-struct(x => console.log(x))
-struct.a(x => console.log('a =>', x))
-struct.b(x => console.log('b =>', x))
-struct.c(x => console.log('c =>', x))
-struct.d(x => console.log('d =>', x))
+var releases = [
+  struct(x => console.log(x))
+]
 
 struct.b.set('Cat')
 
@@ -26,3 +24,7 @@ struct.set({
     tinker: 456
   }
 })
+
+while (releases.length) {
+  releases.pop()()
+}
