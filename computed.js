@@ -13,160 +13,166 @@ module.exports = computed
 computed.NO_CHANGE = {}
 
 function computed (observables, lambda, opts) {
+  var instance = new ProtoComputed(observables, lambda, opts)
+  return instance.MutantComputed.bind(instance)
+}
+
+// optimise memory usage
+function ProtoComputed (observables, lambda, opts) {
   if (!Array.isArray(observables)) {
     observables = [observables]
   }
+  this.values = []
+  this.releases = []
+  this.computedValue = []
+  this.inner = null
+  this.updating = false
+  this.live = false
+  this.lazy = false
+  this.initialized = false
+  this.listeners = []
+  this.observables = observables
+  this.lambda = lambda
+  this.opts = opts
+  this.boundOnUpdate = this.onUpdate.bind(this)
+  this.boundOnInnerUpdate = this.onInnerUpdate.bind(this)
+  this.boundUpdateNow = this.updateNow.bind(this)
+}
 
-  var values = []
-  var releases = []
-  var computedValue = null
-
-  var inner = null
-  var releaseInner = null
-  var updating = false
-
-  var live = false
-  var lazy = false
-  var initialized = false
-  var listeners = []
-
-  var result = function (listener) {
+ProtoComputed.prototype = {
+  MutantComputed: function (listener) {
     if (!listener) {
-      return getValue()
+      return this.getValue()
     }
 
     if (typeof listener !== 'function') {
       throw new Error('Listeners must be functions.')
     }
 
-    listeners.push(listener)
-    listen()
+    this.listeners.push(listener)
+    this.listen()
 
-    return function remove () {
-      for (var i = 0, len = listeners.length; i < len; i++) {
-        if (listeners[i] === listener) {
-          listeners.splice(i, 1)
-          break
+    return this.removeListener.bind(this, listener)
+  },
+  removeListener: function (listener) {
+    for (var i = 0, len = this.listeners.length; i < len; i++) {
+      if (this.listeners[i] === listener) {
+        this.listeners.splice(i, 1)
+        break
+      }
+    }
+    if (!this.listeners.length) {
+      this.unlisten()
+    }
+  },
+  listen: function () {
+    if (!this.live) {
+      for (var i = 0, len = this.observables.length; i < len; i++) {
+        if (isObservable(this.observables[i])) {
+          this.releases.push(this.observables[i](this.boundOnUpdate))
         }
       }
-      if (!listeners.length) {
-        unlisten()
+      if (this.inner) {
+        this.releaseInner = this.inner(this.boundOnInnerUpdate)
+      }
+      this.live = true
+      this.lazy = true
+    }
+  },
+  unlisten: function () {
+    if (this.live) {
+      this.live = false
+
+      if (this.releaseInner) {
+        this.releaseInner()
+        this.releaseInner = null
+      }
+
+      while (this.releases.length) {
+        this.releases.pop()()
       }
     }
-  }
-
-  return result
-
-  // scoped
-
-  function listen () {
-    if (!live) {
-      for (var i = 0, len = observables.length; i < len; i++) {
-        if (isObservable(observables[i])) {
-          releases.push(observables[i](onUpdate))
-        }
-      }
-      if (inner) {
-        releaseInner = inner(onInnerUpdate)
-      }
-      live = true
-      lazy = true
-    }
-  }
-
-  function unlisten () {
-    if (live) {
-      live = false
-
-      if (releaseInner) {
-        releaseInner()
-        releaseInner = null
-      }
-
-      while (releases.length) {
-        releases.pop()()
-      }
-    }
-  }
-
-  function update () {
+  },
+  update: function () {
     var changed = false
-    for (var i = 0, len = observables.length; i < len; i++) {
-      var newValue = resolve(observables[i])
-      if (newValue !== values[i] || isMutable(newValue)) {
+    for (var i = 0, len = this.observables.length; i < len; i++) {
+      var newValue = resolve(this.observables[i])
+      if (newValue !== this.values[i] || this.isMutable(newValue)) {
         changed = true
-        values[i] = newValue
+        this.values[i] = newValue
       }
     }
 
-    if (changed || !initialized) {
-      initialized = true
-      var newComputedValue = lambda.apply(null, values)
+    if (changed || !this.initialized) {
+      this.initialized = true
+      var newComputedValue = this.lambda.apply(null, this.values)
 
       if (newComputedValue === computed.NO_CHANGE) {
         return false
       }
 
-      if (newComputedValue !== computedValue || (isMutable(newComputedValue) && !isObservable(newComputedValue))) {
-        if (releaseInner) {
-          releaseInner()
-          inner = releaseInner = null
+      if (newComputedValue !== this.computedValue || (this.isMutable(newComputedValue) && !isObservable(newComputedValue))) {
+        if (this.releaseInner) {
+          this.releaseInner()
+          this.inner = this.releaseInner = null
         }
 
         if (isObservable(newComputedValue)) {
           // handle returning observable from computed
-          computedValue = newComputedValue()
-          inner = newComputedValue
-          if (live) {
-            releaseInner = inner(onInnerUpdate)
+          this.computedValue = newComputedValue()
+          this.inner = newComputedValue
+          if (this.live) {
+            this.releaseInner = this.inner(this.boundOnInnerUpdate)
           }
         } else {
-          computedValue = newComputedValue
+          this.computedValue = newComputedValue
         }
         return true
       }
     }
     return false
-  }
-
-  function onInnerUpdate (value) {
-    if (value !== computedValue || isMutable(computedValue)) {
-      computedValue = value
-      broadcast(listeners, computedValue)
-    }
-  }
-
-  function onUpdate () {
-    if (opts && opts.nextTick) {
-      if (!updating) {
-        updating = true
-        setImmediate(updateNow)
+  },
+  onUpdate: function () {
+    if (this.opts && this.opts.nextTick) {
+      if (!this.updating) {
+        this.updating = true
+        setImmediate(this.boundUpdateNow)
       }
     } else {
-      updateNow()
+      this.updateNow()
     }
-  }
-
-  function updateNow () {
-    updating = false
-    if (update()) {
-      broadcast(listeners, computedValue)
+  },
+  onInnerUpdate: function (value) {
+    if (value !== this.computedValue || this.isMutable(this.computedValue)) {
+      this.computedValue = value
+      this.broadcast()
     }
-  }
-
-  function getValue () {
-    if (!live || lazy) {
-      lazy = false
-      update()
+  },
+  updateNow: function () {
+    this.updating = false
+    if (this.update()) {
+      this.broadcast()
     }
-    return computedValue
-  }
-
-  function isMutable (value) {
-    if (opts && opts.immutableTypes && opts.immutableTypes.some(type => value instanceof type)) {
+  },
+  getValue: function () {
+    if (!this.live || this.lazy) {
+      this.lazy = false
+      this.update()
+    }
+    return this.computedValue
+  },
+  isMutable: function (value) {
+    if (this.opts && this.opts.immutableTypes && isInstanceOfAny(value, this.opts.immutableTypes)) {
       return false
     } else {
       return isReferenceType(value)
+    }
+  },
+  broadcast: function () {
+    // cache listeners in case modified during broadcast
+    var listeners = this.listeners.slice(0)
+    for (var i = 0, len = listeners.length; i < len; i++) {
+      listeners[i](this.computedValue)
     }
   }
 }
@@ -175,10 +181,13 @@ function isReferenceType (value) {
   return typeof value === 'object' && value !== null
 }
 
-function broadcast (listeners, value) {
-  // cache listeners in case modified during broadcast
-  listeners = listeners.slice(0)
-  for (var i = 0, len = listeners.length; i < len; i++) {
-    listeners[i](value)
+function isInstanceOfAny (object, types) {
+  var result = false
+  for (var i = 0; i < types.length; i++) {
+    if (object instanceof types[i]) {
+      result = true
+      break
+    }
   }
+  return result
 }
