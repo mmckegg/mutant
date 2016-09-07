@@ -78,6 +78,10 @@ ProtoComputed.prototype = {
       }
       this.live = true
       this.lazy = true
+
+      if (this.opts && this.opts.onListen) {
+        this.opts.onListen()
+      }
     }
   },
   unlisten: function () {
