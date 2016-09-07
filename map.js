@@ -1,5 +1,6 @@
 var resolve = require('./resolve')
 var LazyWatcher = require('./lib/lazy-watcher')
+var isReferenceType = require('./lib/is-reference-type')
 
 module.exports = Map
 
@@ -62,6 +63,7 @@ function Map (obs, lambda, opts) {
       releases.pop()()
     }
     rebindAll()
+    lastValues.clear()
   }
 
   function update () {
@@ -90,10 +92,12 @@ function Map (obs, lambda, opts) {
 
     if (changed) {
       // clean up cache
+      var oldLength = items.length
       Array.from(lastValues.keys()).filter(notIncluded, obs).forEach(deleteEntry, lastValues)
       items.length = getLength(obs)
       values.length = items.length
-      for (var index = items.length; index < raw.length; index++) {
+      raw.length = items.length
+      for (var index = items.length; index < oldLength; index++) {
         rebind(index)
       }
     }
@@ -123,7 +127,7 @@ function Map (obs, lambda, opts) {
 
   function updateItem (i) {
     var item = get(obs, i)
-    if (typeof item === 'object') {
+    if (isReferenceType(item)) {
       raw[i] = lambda(item)
     } else {
       if (!lastValues.has(item)) {
