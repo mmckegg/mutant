@@ -93,6 +93,9 @@ function Map (obs, lambda, opts) {
       Array.from(lastValues.keys()).filter(notIncluded, obs).forEach(deleteEntry, lastValues)
       items.length = getLength(obs)
       values.length = items.length
+      for (var index = items.length; index < raw.length; index++) {
+        rebind(index)
+      }
     }
 
     return changed
