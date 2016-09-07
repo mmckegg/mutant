@@ -58,19 +58,23 @@ function appendChild (document, target, data, node) {
     })
   } else if (isObservable(node)) {
     var nodes = getNodes(document, resolve(node))
-    nodes.forEach(append, target)
+    nodes.forEach(append, { target: target, document: document })
     data.targets.set(node, nodes)
     data.bindings.push(new Binding(document, node, data))
   } else {
     node = getNode(document, node)
     target.appendChild(node)
-    walk(node, rebind)
+    if (target.rootNode === document) {
+      walk(node, rebind)
+    }
   }
 }
 
 function append (child) {
-  this.appendChild(child)
-  walk(child, rebind)
+  this.target.appendChild(child)
+  if (this.target.rootNode === this.document) {
+    walk(child, rebind)
+  }
 }
 
 function checkWatcher (document) {
