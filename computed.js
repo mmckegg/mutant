@@ -34,6 +34,7 @@ function ProtoComputed (observables, lambda, opts) {
   this.observables = observables
   this.lambda = lambda
   this.opts = opts
+  this.context = this.opts && this.opts.context || {}
   this.boundOnUpdate = this.onUpdate.bind(this)
   this.boundOnInnerUpdate = this.onInnerUpdate.bind(this)
   this.boundUpdateNow = this.updateNow.bind(this)
@@ -105,7 +106,7 @@ ProtoComputed.prototype = {
 
     if (changed || !this.initialized) {
       this.initialized = true
-      var newComputedValue = this.lambda.apply(null, this.values)
+      var newComputedValue = this.lambda.apply(this.context, this.values)
 
       if (newComputedValue === computed.NO_CHANGE) {
         return false
