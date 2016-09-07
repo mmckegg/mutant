@@ -94,6 +94,7 @@ function Set (defaultValues) {
     var newValues = sources.map(resolve)
     currentValues.filter(notIncluded, newValues).forEach(removeFrom, object)
     newValues.filter(notIncluded, currentValues).forEach(addTo, object)
+    return true
   }
 }
 
