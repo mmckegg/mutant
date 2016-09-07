@@ -92,6 +92,10 @@ ProtoComputed.prototype = {
       while (this.releases.length) {
         this.releases.pop()()
       }
+
+      if (this.opts && this.opts.onUnlisten) {
+        this.opts.onUnlisten()
+      }
     }
   },
   update: function () {
