@@ -53,6 +53,14 @@ function Array (defaultValues) {
     return sources.indexOf(valueOrObs)
   }
 
+  observable.forEach = function (fn, context) {
+    sources.slice().forEach(fn, context)
+  }
+
+  observable.find = function (fn) {
+    return sources.find(fn)
+  }
+
   observable.indexOf
 
   observable.pop = function () {
