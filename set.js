@@ -1,4 +1,4 @@
-var Value = require('./value')
+var LazyWatcher = require('./lib/lazy-watcher')
 
 module.exports = Set
 
@@ -7,28 +7,32 @@ function Set (defaultValues) {
   var sources = []
   var releases = []
 
+  var binder = LazyWatcher(update, listen, unlisten)
+  binder.value = object
+
   if (defaultValues && defaultValues.length) {
     defaultValues.forEach(function (valueOrObs) {
       if (!~sources.indexOf(valueOrObs)) {
         sources.push(valueOrObs)
-        releases[sources.length - 1] = typeof valueOrObs === 'function'
-          ? valueOrObs(refresh)
-          : null
       }
     })
     update()
   }
 
-  var observable = Value(object)
-  var broadcast = observable.set
+  var observable = function MutantSet (listener) {
+    if (!listener) {
+      return binder.getValue()
+    }
+    return binder.addListener(listener)
+  }
 
   observable.add = function (valueOrObs) {
     if (!~sources.indexOf(valueOrObs)) {
       sources.push(valueOrObs)
-      releases[sources.length - 1] = typeof valueOrObs === 'function'
-        ? valueOrObs(refresh)
-        : null
-      refresh()
+      if (binder.live) {
+        releases[sources.length - 1] = bind(valueOrObs)
+      }
+      binder.onUpdate()
     }
   }
 
@@ -36,7 +40,7 @@ function Set (defaultValues) {
     releases.forEach(tryInvoke)
     sources.length = 0
     releases.length = 0
-    refresh()
+    binder.onUpdate()
   }
 
   observable.delete = function (valueOrObs) {
@@ -44,7 +48,7 @@ function Set (defaultValues) {
     if (~index) {
       sources.splice(index, 1)
       releases.splice(index, 1).forEach(tryInvoke)
-      refresh()
+      binder.onUpdate()
     }
   }
 
@@ -57,7 +61,7 @@ function Set (defaultValues) {
     values.forEach(function (value) {
       sources.push(value)
     })
-    refresh()
+    binder.onUpdate()
   }
 
   observable.get = function (index) {
@@ -68,13 +72,21 @@ function Set (defaultValues) {
     return sources.length
   }
 
-  observable.destroy = observable.clear
-
   return observable
 
-  function refresh () {
-    update()
-    broadcast(object)
+  function bind (valueOrObs) {
+    return typeof valueOrObs === 'function' ? valueOrObs(binder.onUpdate) : null
+  }
+
+  function listen () {
+    sources.forEach(function (obs, i) {
+      releases[i] = bind(obs)
+    })
+  }
+
+  function unlisten () {
+    releases.forEach(tryInvoke)
+    releases.length = 0
   }
 
   function update () {
