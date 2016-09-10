@@ -1,15 +1,20 @@
+var Value = require('./value')
 var LazyWatcher = require('./lib/lazy-watcher')
-var isReferenceType = require('./lib/is-reference-type')
+var isSame = require('./lib/is-same')
 var resolve = require('./resolve')
+var isObservable = require('./is-observable')
 
 // TODO: reimplement using LazyWatcher
 
 module.exports = Dict
 
-function Dict (defaultValues) {
+function Dict (defaultValues, opts) {
   var object = Object.create({})
   var sources = []
   var releases = []
+  var fixedIndexing = opts && opts.fixedIndexing || false
+
+  var comparer = opts && opts.comparer || null
 
   var binder = LazyWatcher(update, listen, unlisten)
   binder.value = object
@@ -28,8 +33,10 @@ function Dict (defaultValues) {
   }
 
   observable.put = function (key, valueOrObs) {
+    valueOrObs = getObsValue(valueOrObs)
     put(key, valueOrObs)
     binder.broadcast()
+    return valueOrObs
   }
 
   observable.get = function (key) {
@@ -63,23 +70,50 @@ function Dict (defaultValues) {
   }
 
   observable.set = function (values) {
-    Object.keys(sources).forEach(function (key) {
-      tryInvoke(releases[key])
-      delete sources[key]
-      delete releases[key]
-      delete object[key]
-    })
+    var keys = values && Object.keys(values) || []
+    if (fixedIndexing) {
+      keys.forEach(function (key) {
+        if (sources[key]) {
+          sources[key].set(values[key])
+        } else {
+          put(key, getObsValue(values[key]))
+        }
+      })
 
-    Object.keys(values).forEach(function (key) {
-      put(key, values[key])
-    })
+      Object.keys(sources).forEach(function (key) {
+        if (!keys.includes(key)) {
+          tryInvoke(releases[key])
+          delete sources[key]
+          delete releases[key]
+          delete object[key]
+        }
+      })
+    } else {
+      Object.keys(sources).forEach(function (key) {
+        tryInvoke(releases[key])
+        delete sources[key]
+        delete releases[key]
+        delete object[key]
+      })
 
-    binder.broadcast()
+      keys.forEach(function (key) {
+        put(key, values[key])
+      })
+
+      binder.broadcast()
+    }
   }
 
   return observable
 
   // scoped
+
+  function getObsValue (valueOrObs) {
+    if (fixedIndexing && !isObservable(valueOrObs)) {
+      valueOrObs = Value(valueOrObs)
+    }
+    return valueOrObs
+  }
 
   function put (key, valueOrObs) {
     tryInvoke(releases[key])
@@ -116,7 +150,7 @@ function Dict (defaultValues) {
     var changed = false
     Object.keys(sources).forEach(function (key) {
       var newValue = resolve(sources[key])
-      if (newValue !== object[key] || isReferenceType(newValue)) {
+      if (!isSame(newValue, object[key], comparer)) {
         object[key] = newValue
         changed = true
       }

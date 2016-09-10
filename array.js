@@ -1,13 +1,19 @@
+var Value = require('./value')
 var LazyWatcher = require('./lib/lazy-watcher')
-var isReferenceType = require('./lib/is-reference-type')
+var isSame = require('./lib/is-same')
+var isObservable = require('./is-observable')
 var resolve = require('./resolve')
+var addCollectionMethods = require('./lib/add-collection-methods')
 
 module.exports = Array
 
-function Array (defaultValues) {
+function Array (defaultValues, opts) {
   var object = []
   var sources = []
   var releases = []
+  var fixedIndexing = opts && opts.fixedIndexing || false
+
+  var comparer = opts && opts.comparer || null
 
   var binder = LazyWatcher(update, listen, unlisten)
   binder.value = object
@@ -23,43 +29,45 @@ function Array (defaultValues) {
     return binder.addListener(listener)
   }
 
-  observable.push = function (args) {
-    for (var i = 0; i < arguments.length; i++) {
-      add(arguments[i])
+  // getLength, get, indexOf, etc
+  addCollectionMethods(observable, sources)
+
+  observable.push = function (item) {
+    var result = null
+    if (arguments.length === 1) {
+      result = add(item)
+    } else {
+      result = []
+      for (var i = 0; i < arguments.length; i++) {
+        result.push(add(arguments[i]))
+      }
     }
     binder.broadcast()
+    return result
+  }
+
+  observable.put = function (index, valueOrObs) {
+    valueOrObs = getObsValue(valueOrObs)
+    sources[index] = valueOrObs
+    object[index] = resolve(valueOrObs)
+    if (binder.live) {
+      tryInvoke(releases[index])
+      releases[index] = bind(valueOrObs)
+    }
+    binder.broadcast()
+    return valueOrObs
   }
 
   observable.insert = function (valueOrObs, at) {
+    valueOrObs = getObsValue(valueOrObs)
     sources.splice(at, 0, valueOrObs)
     if (binder.live) releases.splice(at, 0, bind(valueOrObs))
     object.splice(at, 0, resolve(valueOrObs))
     binder.broadcast()
+    return valueOrObs
   }
 
-  observable.get = function (index) {
-    return sources[index]
-  }
 
-  observable.getLength = function (index) {
-    return sources.length
-  }
-
-  observable.includes = function (valueOrObs) {
-    return !!~sources.indexOf(valueOrObs)
-  }
-
-  observable.indexOf = function (valueOrObs) {
-    return sources.indexOf(valueOrObs)
-  }
-
-  observable.forEach = function (fn, context) {
-    sources.slice().forEach(fn, context)
-  }
-
-  observable.find = function (fn) {
-    return sources.find(fn)
-  }
 
   observable.indexOf
 
@@ -88,8 +96,11 @@ function Array (defaultValues) {
   }
 
   observable.delete = function (valueOrObs) {
-    var index = sources.indexOf(valueOrObs)
-    if (~index) {
+    observable.deleteAt(sources.indexOf(valueOrObs))
+  }
+
+  observable.deleteAt = function (index) {
+    if (index >= 0 && index < sources.length) {
       sources.splice(index, 1)
       if (binder.live) releases.splice(index, 1).forEach(tryInvoke)
       object.splice(index, 1)
@@ -98,14 +109,37 @@ function Array (defaultValues) {
   }
 
   observable.set = function (values) {
-    unlisten()
-    sources.length = 0
-    releases.length = 0
-    object.length = 0
-    values.forEach(add)
-    if (binder.live) {
-      listen()
+    if (fixedIndexing) {
+      var length = values && values.length || 0
+      for (var i = 0; i < length; i++) {
+        if (!sources[i]) {
+          var valueOrObs = getObsValue(values[i])
+          sources[i] = valueOrObs
+          object[i] = resolve(valueOrObs)
+          if (binder.live) {
+            releases[i] = bind(valueOrObs)
+          }
+        } else {
+          sources[i].set(values[i])
+        }
+      }
+      for (var index = length; index < sources.length; index++) {
+        tryInvoke(releases[index])
+      }
+      releases.length = length
+      sources.length = length
+      object.length = length
       binder.broadcast()
+    } else {
+      unlisten()
+      sources.length = 0
+      releases.length = 0
+      object.length = 0
+      values.forEach(add)
+      if (binder.live) {
+        listen()
+        binder.broadcast()
+      }
     }
   }
 
@@ -113,12 +147,21 @@ function Array (defaultValues) {
 
   // scoped
 
+  function getObsValue (valueOrObs) {
+    if (fixedIndexing && !isObservable(valueOrObs)) {
+      valueOrObs = Value(valueOrObs)
+    }
+    return valueOrObs
+  }
+
   function add (valueOrObs) {
+    valueOrObs = getObsValue(valueOrObs)
     sources.push(valueOrObs)
+    object.push(resolve(valueOrObs))
     if (binder.live) {
       releases.push(bind(valueOrObs))
     }
-    object.push(resolve(valueOrObs))
+    return valueOrObs
   }
 
   function bind (valueOrObs) {
@@ -138,9 +181,9 @@ function Array (defaultValues) {
 
   function update () {
     var changed = false
-    sources.forEach(function (key, i) {
-      var newValue = resolve(observable[key])
-      if (newValue !== object[i] || isReferenceType(newValue)) {
+    sources.forEach(function (source, i) {
+      var newValue = resolve(source)
+      if (!isSame(newValue, object[i], comparer)) {
         object[i] = newValue
         changed = true
       }

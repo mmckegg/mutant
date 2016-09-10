@@ -1,52 +1,44 @@
+var resolve = require('./resolve')
+var addCollectionMethods = require('./lib/add-collection-methods')
 var computed = require('./computed')
 
 module.exports = function Concat (observables) {
   var values = []
   var rawValues = []
 
-  var result = computed(observables, function (args) {
+  var instance = computed.extended(observables, function () {
     var index = 0
-    for (var i = 0; i < arguments.length; i++) {
-      for (var x = 0; x < arguments[i].length; x++) {
-        var value = arguments[i][x]
-        var raw = get(observables[i], x)
+
+    forEach(observables, function (collection) {
+      forEach(collection, function (item) {
+        var value = resolve(item)
         values[index] = value
-        rawValues[index] = raw
+        rawValues[index] = item
         index += 1
-      }
-    }
+      })
+    })
+
     values.length = index
     rawValues.length = index
     return values
   })
 
-  result.get = function (index) {
-    return rawValues[index]
+  var result = function MutantConcat (listener) {
+    return instance(listener)
   }
 
-  result.getLength = function (index) {
-    return rawValues.length
-  }
-
-  result.includes = function (valueOrObs) {
-    return !!~rawValues.indexOf(valueOrObs)
-  }
-
-  result.indexOf = function (valueOrObs) {
-    return rawValues.indexOf(valueOrObs)
-  }
+  // getLength, get, indexOf, etc
+  addCollectionMethods(result, rawValues, instance.checkUpdated)
 
   return result
 }
 
-function get (target, index) {
-  if (typeof target === 'function' && !target.get) {
-    target = target()
+function forEach (sources, fn) {
+  if (sources && !sources.forEach) {
+    sources = resolve(sources)
   }
 
-  if (Array.isArray(target)) {
-    return target[index]
-  } else if (target && target.get) {
-    return target.get(index)
+  if (sources && sources.forEach) {
+    sources.forEach(fn)
   }
 }
