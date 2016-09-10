@@ -22,7 +22,8 @@ npm install @mmckegg/mutant --save
 Requires an environment that supports:
   - `Map` and `WeakMap`
   - `MutationObserver` (optional, only for root `html-element` binding support)
-  - ES5 arrays
+  - ES5 arrays (`Array.prototype.forEach`, etc)
+  - `Array.prototype.includes`
 
 ## Use
 
