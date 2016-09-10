@@ -1,15 +1,15 @@
 module.exports = Observable
 
-function Observable (value) {
+function Observable (value, opts) {
   var listeners = []
-  value = value === undefined ? null : value
+  value = getValue(value, opts)
 
   observable.set = function (v) {
-    value = v
+    value = getValue(v, opts)
 
     var cachedListeners = listeners.slice(0)
     for (var i = 0, len = cachedListeners.length; i < len; i++) {
-      cachedListeners[i](v)
+      cachedListeners[i](value)
     }
   }
 
@@ -35,4 +35,15 @@ function Observable (value) {
       }
     }
   }
+}
+
+function getValue (value, opts) {
+  if (value == null) {
+    if (opts && opts.defaultValue != null) {
+      value = opts.defaultValue
+    } else {
+      value = null
+    }
+  }
+  return value
 }
