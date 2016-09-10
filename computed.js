@@ -7,12 +7,15 @@
 
 var resolve = require('./resolve')
 var isObservable = require('./is-observable')
+var isSame = require('./lib/is-same')
 
 module.exports = computed
 
 computed.NO_CHANGE = {}
+computed.extended = extendedComputed
 
 function computed (observables, lambda, opts) {
+  // opts: nextTick, comparer, context
   var instance = new ProtoComputed(observables, lambda, opts)
   return instance.MutantComputed.bind(instance)
 }
@@ -34,9 +37,9 @@ function ProtoComputed (observables, lambda, opts) {
   this.observables = observables
   this.lambda = lambda
   this.opts = opts
-  this.context = this.opts && this.opts.context || {}
+  this.comparer = opts && opts.comparer || null
+  this.context = opts && opts.context || {}
   this.boundOnUpdate = this.onUpdate.bind(this)
-  this.boundOnInnerUpdate = this.onInnerUpdate.bind(this)
   this.boundUpdateNow = this.updateNow.bind(this)
 }
 
@@ -74,7 +77,7 @@ ProtoComputed.prototype = {
         }
       }
       if (this.inner) {
-        this.releaseInner = this.inner(this.boundOnInnerUpdate)
+        this.releaseInner = this.inner(this.onInnerUpdate.bind(this, this.inner))
       }
       this.live = true
       this.lazy = true
@@ -106,7 +109,7 @@ ProtoComputed.prototype = {
     var changed = false
     for (var i = 0, len = this.observables.length; i < len; i++) {
       var newValue = resolve(this.observables[i])
-      if (newValue !== this.values[i] || this.isMutable(newValue)) {
+      if (!isSame(newValue, this.values[i], this.comparer)) {
         changed = true
         this.values[i] = newValue
       }
@@ -120,7 +123,7 @@ ProtoComputed.prototype = {
         return false
       }
 
-      if (newComputedValue !== this.computedValue || (this.isMutable(newComputedValue) && !isObservable(newComputedValue))) {
+      if (!isSame(newComputedValue, this.computedValue, this.comparer)) {
         if (this.releaseInner) {
           this.releaseInner()
           this.inner = this.releaseInner = null
@@ -131,7 +134,7 @@ ProtoComputed.prototype = {
           this.computedValue = newComputedValue()
           this.inner = newComputedValue
           if (this.live) {
-            this.releaseInner = this.inner(this.boundOnInnerUpdate)
+            this.releaseInner = this.inner(this.onInnerUpdate.bind(this, this.inner))
           }
         } else {
           this.computedValue = newComputedValue
@@ -151,10 +154,12 @@ ProtoComputed.prototype = {
       this.updateNow()
     }
   },
-  onInnerUpdate: function (value) {
-    if (value !== this.computedValue || this.isMutable(this.computedValue)) {
-      this.computedValue = value
-      this.broadcast()
+  onInnerUpdate: function (obs, value) {
+    if (obs === this.inner) {
+      if (!isSame(value, this.computedValue, this.comparer)) {
+        this.computedValue = value
+        this.broadcast()
+      }
     }
   },
   updateNow: function () {
@@ -164,18 +169,14 @@ ProtoComputed.prototype = {
     }
   },
   getValue: function () {
-    if (!this.live || this.lazy) {
+    if (!this.live || this.lazy || this.updating) {
       this.lazy = false
       this.update()
+      if (this.inner) {
+        this.computedValue = resolve(this.inner)
+      }
     }
     return this.computedValue
-  },
-  isMutable: function (value) {
-    if (this.opts && this.opts.immutableTypes && isInstanceOfAny(value, this.opts.immutableTypes)) {
-      return false
-    } else {
-      return isReferenceType(value)
-    }
   },
   broadcast: function () {
     // cache listeners in case modified during broadcast
@@ -186,17 +187,23 @@ ProtoComputed.prototype = {
   }
 }
 
-function isReferenceType (value) {
-  return typeof value === 'object' && value !== null
-}
+function extendedComputed (observables, update) {
+  var live = false
+  var lazy = false
 
-function isInstanceOfAny (object, types) {
-  var result = false
-  for (var i = 0; i < types.length; i++) {
-    if (object instanceof types[i]) {
-      result = true
-      break
+  var instance = computed(observables, function () {
+    return update()
+  }, {
+    onListen: function () { live = lazy = true },
+    onUnlisten: function () { live = false }
+  })
+
+  instance.checkUpdated = function () {
+    if (!live || lazy) {
+      lazy = false
+      update()
     }
   }
-  return result
+
+  return instance
 }
