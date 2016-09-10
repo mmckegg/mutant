@@ -1,14 +1,21 @@
 var resolve = require('./resolve')
 var LazyWatcher = require('./lib/lazy-watcher')
-var isReferenceType = require('./lib/is-reference-type')
+var isSame = require('./lib/is-same')
+var addCollectionMethods = require('./lib/add-collection-methods')
 
 module.exports = Map
 
 function Map (obs, lambda, opts) {
+  // opts: comparer, maxTime, onRemove
+
+  var comparer = opts && opts.comparer || null
   var releases = []
+  var invalidateReleases = new global.WeakMap()
   var binder = LazyWatcher(update, listen, unlisten)
 
   var lastValues = new global.Map()
+  var rawSet = new global.Set()
+
   var items = []
 
   var raw = []
@@ -31,21 +38,7 @@ function Map (obs, lambda, opts) {
     return binder.addListener(listener)
   }
 
-  result.get = function (index) {
-    return raw[index]
-  }
-
-  result.getLength = function (index) {
-    return raw.length
-  }
-
-  result.includes = function (valueOrObs) {
-    return !!~raw.indexOf(valueOrObs)
-  }
-
-  result.indexOf = function (valueOrObs) {
-    return raw.indexOf(valueOrObs)
-  }
+  addCollectionMethods(result, raw, binder.checkUpdated)
 
   return result
 
@@ -56,6 +49,10 @@ function Map (obs, lambda, opts) {
       releases.push(obs(binder.onUpdate))
     }
     rebindAll()
+
+    if (opts && opts.onListen) {
+      opts.onListen()
+    }
   }
 
   function unlisten () {
@@ -63,7 +60,10 @@ function Map (obs, lambda, opts) {
       releases.pop()()
     }
     rebindAll()
-    lastValues.clear()
+
+    if (opts && opts.onUnlisten) {
+      opts.onUnlisten()
+    }
   }
 
   function update () {
@@ -80,7 +80,7 @@ function Map (obs, lambda, opts) {
       var currentItem = items[i]
       items[i] = item
 
-      if (typeof item === 'object' || item !== currentItem) {
+      if (!isSame(item, currentItem, comparer)) {
         if (maxTime && Date.now() - startedAt > maxTime) {
           queueUpdateItem(i)
         } else {
@@ -92,14 +92,16 @@ function Map (obs, lambda, opts) {
 
     if (changed) {
       // clean up cache
-      var oldLength = items.length
+      var oldLength = raw.length
+      var newLength = getLength(obs)
       Array.from(lastValues.keys()).filter(notIncluded, obs).forEach(deleteEntry, lastValues)
-      items.length = getLength(obs)
-      values.length = items.length
-      raw.length = items.length
-      for (var index = items.length; index < oldLength; index++) {
+      items.length = newLength
+      values.length = newLength
+      raw.length = newLength
+      for (var index = newLength; index < oldLength; index++) {
         rebind(index)
       }
+      Array.from(rawSet.values()).filter(notIncluded, raw).forEach(notifyRemoved)
     }
 
     return changed
@@ -125,18 +127,54 @@ function Map (obs, lambda, opts) {
     }
   }
 
+  function invalidateOn (item, obs) {
+    if (!invalidateReleases.has(item)) {
+      invalidateReleases.set(item, [])
+    }
+    invalidateReleases.get(item).push(obs(invalidate.bind(null, item)))
+  }
+
+  function addInvalidateCallback (item) {
+    return invalidateOn.bind(null, item)
+  }
+
+  function notifyRemoved (item) {
+    rawSet.delete(item)
+    invalidateReleases.delete(item)
+    if (opts && opts.onRemove) {
+      opts.onRemove(item)
+    }
+  }
+
+  function invalidate (item) {
+    var changed = false
+    var length = getLength(obs)
+    lastValues.delete(item)
+    for (var i = 0; i < length; i++) {
+      if (get(obs, i) === item) {
+        updateItem(i)
+        changed = true
+      }
+    }
+    if (changed) {
+      binder.broadcast()
+    }
+  }
+
   function updateItem (i) {
     var item = get(obs, i)
-    if (isReferenceType(item)) {
-      raw[i] = lambda(item)
-    } else {
-      if (!lastValues.has(item)) {
-        lastValues.set(item, lambda(item))
+    if (!lastValues.has(item) || !isSame(item, item, comparer)) {
+      var newValue = lambda(item, addInvalidateCallback(item))
+      if (newValue !== raw[i]) {
+        raw[i] = newValue
       }
+      rawSet.add(newValue)
+      lastValues.set(item, raw[i])
+      rebind(i)
+    } else {
       raw[i] = lastValues.get(item)
     }
     values[i] = resolve(raw[i])
-    rebind(i)
   }
 
   function rebind (index) {
@@ -160,7 +198,7 @@ function Map (obs, lambda, opts) {
 
   function updateValue (obs, index) {
     return obs(function (value) {
-      if (values[index] !== value || typeof value === 'object') {
+      if (!isSame(values[index], value, comparer)) {
         values[index] = value
         binder.broadcast()
       }
