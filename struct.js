@@ -1,6 +1,6 @@
 var Value = require('./value')
 var LazyWatcher = require('./lib/lazy-watcher')
-var isReferenceType = require('./lib/is-reference-type')
+var isSame = require('./lib/is-same')
 
 module.exports = Struct
 
@@ -10,11 +10,13 @@ var blackList = {
   'destroy': '`destroy` is a reserved key of struct\n'
 }
 
-function Struct (properties) {
+function Struct (properties, opts) {
   var object = Object.create({})
   var releases = []
   var binder = LazyWatcher(update, listen, unlisten)
   binder.value = object
+
+  var comparer = opts && opts.comparer || null
 
   var observable = function MutantStruct (listener) {
     if (!listener) {
@@ -72,7 +74,7 @@ function Struct (properties) {
     keys.map(function (key) {
       var obs = observable[key]
       releases.push(obs(function (val) {
-        if (val !== object[key] || isReferenceType(val)) {
+        if (!isSame(val, object[key], comparer)) {
           object[key] = val
           if (!suspendBroadcast) {
             binder.broadcast(object)
@@ -92,7 +94,7 @@ function Struct (properties) {
     var changed = false
     keys.forEach(function (key) {
       var newValue = observable[key]()
-      if (newValue !== object[key] || isReferenceType(newValue)) {
+      if (!isSame(newValue, object[key], comparer)) {
         object[key] = observable[key]()
         changed = true
       }
