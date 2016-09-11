@@ -67,10 +67,6 @@ function Array (defaultValues, opts) {
     return valueOrObs
   }
 
-
-
-  observable.indexOf
-
   observable.pop = function () {
     var result = sources.pop()
     if (binder.live) tryInvoke(releases.pop())
@@ -106,6 +102,10 @@ function Array (defaultValues, opts) {
       object.splice(index, 1)
       binder.broadcast()
     }
+  }
+
+  observable.transaction = function (cb) {
+    binder.transaction(observable, cb)
   }
 
   observable.set = function (values) {
