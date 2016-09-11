@@ -37,11 +37,15 @@ function MutantMappedArray (defaultItems, lambda, opts) {
     if (~currentIndex) {
       var item = list.get(currentIndex)
       if (currentIndex < targetIndex) {
-        list.insert(item, targetIndex + 1)
-        list.deleteAt(currentIndex)
-      } else {
-        list.insert(item, targetIndex)
-        list.deleteAt(currentIndex)
+        list.transaction(function () {
+          list.insert(item, targetIndex + 1)
+          list.deleteAt(currentIndex)
+        })
+      } else if (currentIndex > targetIndex) {
+        list.transaction(function () {
+          list.insert(item, targetIndex)
+          list.deleteAt(currentIndex + 1)
+        })
       }
     }
   }
