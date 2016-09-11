@@ -10,9 +10,9 @@ function Map (obs, lambda, opts) {
 
   var comparer = opts && opts.comparer || null
   var releases = []
-  var invalidateReleases = new global.WeakMap()
   var binder = LazyWatcher(update, listen, unlisten)
 
+  var itemInvalidators = new global.Map()
   var lastValues = new global.Map()
   var rawSet = new global.Set()
 
@@ -50,6 +50,12 @@ function Map (obs, lambda, opts) {
     }
     rebindAll()
 
+    Array.from(itemInvalidators.values).forEach(function (invalidators) {
+      invalidators.forEach(function (invalidator) {
+        invalidator.release = invalidator.observable(invalidate.bind(null, invalidator))
+      })
+    })
+
     if (opts && opts.onListen) {
       opts.onListen()
     }
@@ -60,6 +66,10 @@ function Map (obs, lambda, opts) {
       releases.pop()()
     }
     rebindAll()
+
+    Array.from(itemInvalidators.values).forEach(function (invalidators) {
+      invalidators.forEach(invokeRelease)
+    })
 
     if (opts && opts.onUnlisten) {
       opts.onUnlisten()
@@ -80,7 +90,7 @@ function Map (obs, lambda, opts) {
       var currentItem = items[i]
       items[i] = item
 
-      if (!isSame(item, currentItem, comparer)) {
+      if (!isSame(item, currentItem, comparer) || (!binder.live && checkInvalidated(item))) {
         if (maxTime && Date.now() - startedAt > maxTime) {
           queueUpdateItem(i)
         } else {
@@ -94,17 +104,26 @@ function Map (obs, lambda, opts) {
       // clean up cache
       var oldLength = raw.length
       var newLength = getLength(obs)
-      Array.from(lastValues.keys()).filter(notIncluded, obs).forEach(deleteEntry, lastValues)
+      Array.from(lastValues.keys()).filter(notIncluded, obs).forEach(removeItem)
       items.length = newLength
       values.length = newLength
       raw.length = newLength
       for (var index = newLength; index < oldLength; index++) {
         rebind(index)
       }
-      Array.from(rawSet.values()).filter(notIncluded, raw).forEach(notifyRemoved)
+      Array.from(rawSet.values()).filter(notIncluded, raw).forEach(removeMapped)
     }
 
     return changed
+  }
+
+  function checkInvalidated (item) {
+    if (itemInvalidators.has(item)) {
+      return itemInvalidators.get(item).some(function (invalidator) {
+        lastValues.delete(invalidator.item)
+        return !isSame(invalidator.currentValue, resolve(invalidator.observable), comparer)
+      })
+    }
   }
 
   function queueUpdateItem (i) {
@@ -128,30 +147,50 @@ function Map (obs, lambda, opts) {
   }
 
   function invalidateOn (item, obs) {
-    if (!invalidateReleases.has(item)) {
-      invalidateReleases.set(item, [])
+    if (!itemInvalidators.has(item)) {
+      itemInvalidators.set(item, [])
     }
-    invalidateReleases.get(item).push(obs(invalidate.bind(null, item)))
+
+    var invalidators = itemInvalidators.get(item)
+    var invalidator = {
+      currentValue: resolve(obs),
+      observable: obs,
+      item: item,
+      release: null
+    }
+
+    invalidators.push(invalidator)
+
+    if (binder.live) {
+      invalidator.release = invalidator.observable(invalidate.bind(null, invalidator))
+    }
   }
 
   function addInvalidateCallback (item) {
     return invalidateOn.bind(null, item)
   }
 
-  function notifyRemoved (item) {
-    rawSet.delete(item)
-    invalidateReleases.delete(item)
-    if (opts && opts.onRemove) {
-      opts.onRemove(item)
+  function removeItem (item) {
+    lastValues.delete(item)
+    if (itemInvalidators.has(item)) {
+      itemInvalidators.get(item).forEach(invokeRelease)
+      itemInvalidators.delete(item)
     }
   }
 
-  function invalidate (item) {
+  function removeMapped (mappedItem) {
+    rawSet.delete(mappedItem)
+    if (opts && opts.onRemove) {
+      opts.onRemove(mappedItem)
+    }
+  }
+
+  function invalidate (entry) {
     var changed = false
     var length = getLength(obs)
-    lastValues.delete(item)
+    lastValues.delete(entry.item)
     for (var i = 0; i < length; i++) {
-      if (get(obs, i) === item) {
+      if (get(obs, i) === entry.item) {
         updateItem(i)
         changed = true
       }
@@ -164,6 +203,10 @@ function Map (obs, lambda, opts) {
   function updateItem (i) {
     var item = get(obs, i)
     if (!lastValues.has(item) || !isSame(item, item, comparer)) {
+      if (itemInvalidators.has(item)) {
+        itemInvalidators.get(item).forEach(invokeRelease)
+        itemInvalidators.delete(item)
+      }
       var newValue = lambda(item, addInvalidateCallback(item))
       if (newValue !== raw[i]) {
         raw[i] = newValue
@@ -248,4 +291,11 @@ function notIncluded (value) {
 
 function deleteEntry (entry) {
   this.delete(entry)
+}
+
+function invokeRelease (item) {
+  if (item.release) {
+    item.release()
+    item.release = null
+  }
 }

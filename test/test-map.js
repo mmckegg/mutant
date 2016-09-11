@@ -24,3 +24,14 @@ array.push('chicken')
 array.push('wolf')
 array.insert('sheep', 0)
 value.set('monkey')
+
+// offline invalidate
+var invalidator = Value(false)
+var count = 0
+var thing = Map(Array(['cat']), function (obj, invalidateOn) {
+  invalidateOn(invalidator)
+  return count++
+})
+console.log(thing())
+invalidator.set(true)
+console.log(thing())
