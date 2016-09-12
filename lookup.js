@@ -33,7 +33,7 @@ function Lookup (obs, lambdaOrKey, opts) {
       var item = mapped.get(i)
       if (item) {
         var key = resolve(item.key)
-        if (key !== undefined) {
+        if (key != null) {
           var rawValue = item.value
           currentKeys.push(key)
           keys.add(key)
