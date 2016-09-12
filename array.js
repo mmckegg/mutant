@@ -4,6 +4,7 @@ var isSame = require('./lib/is-same')
 var isObservable = require('./is-observable')
 var resolve = require('./resolve')
 var addCollectionMethods = require('./lib/add-collection-methods')
+var forEach = require('./for-each')
 
 module.exports = Array
 
@@ -19,7 +20,7 @@ function Array (defaultValues, opts) {
   binder.value = object
 
   if (defaultValues && defaultValues.length) {
-    defaultValues.forEach(add)
+    forEach(defaultValues, add)
   }
 
   var observable = function MutantArray (listener) {
@@ -135,7 +136,7 @@ function Array (defaultValues, opts) {
       sources.length = 0
       releases.length = 0
       object.length = 0
-      values.forEach(add)
+      forEach(values, add)
       if (binder.live) {
         listen()
         binder.broadcast()
