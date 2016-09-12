@@ -1,6 +1,8 @@
 var computed = require('./computed')
 var resolve = require('./resolve')
-var isObservable = require('./is-observable')
+var forEach = require('./for-each')
+var forEachPair = require('./for-each-pair')
+var addLookupMethods = require('./lib/add-lookup-methods')
 
 module.exports = Merge
 
@@ -37,35 +39,7 @@ function Merge (sources) {
     return instance(listener)
   }
 
-  result.keys = function () {
-    instance.checkUpdated()
-    return Array.from(keys.values())
-  }
-
-  result.get = function (key) {
-    instance.checkUpdated()
-    return raw[key]
-  }
+  addLookupMethods(result, raw, instance.checkUpdated)
 
   return result
-}
-
-function forEach (sources, fn) {
-  if (sources && !sources.forEach) {
-    sources = resolve(sources)
-  }
-
-  if (sources && sources.forEach) {
-    sources.forEach(fn)
-  }
-}
-
-function forEachPair (source, fn) {
-  if (source) {
-    if (isObservable(source) && source.keys && source.get) {
-      resolve(source.keys).forEach(function (key) {
-        fn(key, source.get(key))
-      })
-    }
-  }
 }

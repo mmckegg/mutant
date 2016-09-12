@@ -1,6 +1,7 @@
 var resolve = require('./resolve')
 var addCollectionMethods = require('./lib/add-collection-methods')
 var computed = require('./computed')
+var forEach = require('./for-each')
 
 module.exports = function Concat (observables) {
   var values = []
@@ -31,14 +32,4 @@ module.exports = function Concat (observables) {
   addCollectionMethods(result, rawValues, instance.checkUpdated)
 
   return result
-}
-
-function forEach (sources, fn) {
-  if (sources && !sources.forEach) {
-    sources = resolve(sources)
-  }
-
-  if (sources && sources.forEach) {
-    sources.forEach(fn)
-  }
 }

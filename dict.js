@@ -3,15 +3,15 @@ var LazyWatcher = require('./lib/lazy-watcher')
 var isSame = require('./lib/is-same')
 var resolve = require('./resolve')
 var isObservable = require('./is-observable')
-
-// TODO: reimplement using LazyWatcher
+var forEachPair = require('./for-each-pair')
+var addLookupMethods = require('./lib/add-lookup-methods')
 
 module.exports = Dict
 
 function Dict (defaultValues, opts) {
   var object = Object.create({})
-  var sources = []
-  var releases = []
+  var sources = {}
+  var releases = {}
   var fixedIndexing = opts && opts.fixedIndexing || false
 
   var comparer = opts && opts.comparer || null
@@ -20,9 +20,7 @@ function Dict (defaultValues, opts) {
   binder.value = object
 
   if (defaultValues) {
-    Object.keys(defaultValues).forEach(function (key) {
-      put(key, defaultValues[key])
-    })
+    forEachPair(defaultValues, put)
   }
 
   var observable = function MutantDictionary (listener) {
@@ -32,19 +30,13 @@ function Dict (defaultValues, opts) {
     return binder.addListener(listener)
   }
 
+  addLookupMethods(observable, sources)
+
   observable.put = function (key, valueOrObs) {
     valueOrObs = getObsValue(valueOrObs)
     put(key, valueOrObs)
     binder.broadcast()
     return valueOrObs
-  }
-
-  observable.get = function (key) {
-    return sources[key]
-  }
-
-  observable.keys = function () {
-    return Object.keys(sources)
   }
 
   observable.clear = function () {
@@ -70,13 +62,15 @@ function Dict (defaultValues, opts) {
   }
 
   observable.set = function (values) {
-    var keys = values && Object.keys(values) || []
     if (fixedIndexing) {
-      keys.forEach(function (key) {
+      var keys = []
+
+      forEachPair(values, function (key, value) {
+        keys.push(key)
         if (sources[key]) {
-          sources[key].set(values[key])
+          sources[key].set(value)
         } else {
-          put(key, getObsValue(values[key]))
+          put(key, getObsValue(value))
         }
       })
 
@@ -96,10 +90,7 @@ function Dict (defaultValues, opts) {
         delete object[key]
       })
 
-      keys.forEach(function (key) {
-        put(key, values[key])
-      })
-
+      forEachPair(values, put)
       binder.broadcast()
     }
   }
