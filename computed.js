@@ -27,7 +27,8 @@ function ProtoComputed (observables, lambda, opts) {
   }
   this.values = []
   this.releases = []
-  this.computedValue = []
+  this.computedValue = null
+  this.outputValue = null
   this.inner = null
   this.updating = false
   this.live = false
@@ -129,15 +130,17 @@ ProtoComputed.prototype = {
           this.inner = this.releaseInner = null
         }
 
+        this.computedValue = newComputedValue
+
         if (isObservable(newComputedValue)) {
           // handle returning observable from computed
-          this.computedValue = newComputedValue()
+          this.outputValue = newComputedValue()
           this.inner = newComputedValue
           if (this.live) {
             this.releaseInner = this.inner(this.onInnerUpdate.bind(this, this.inner))
           }
         } else {
-          this.computedValue = newComputedValue
+          this.outputValue = this.computedValue
         }
         return true
       }
@@ -156,8 +159,8 @@ ProtoComputed.prototype = {
   },
   onInnerUpdate: function (obs, value) {
     if (obs === this.inner) {
-      if (!isSame(value, this.computedValue, this.comparer)) {
-        this.computedValue = value
+      if (!isSame(value, this.outputValue, this.comparer)) {
+        this.outputValue = value
         this.broadcast()
       }
     }
@@ -173,16 +176,16 @@ ProtoComputed.prototype = {
       this.lazy = false
       this.update()
       if (this.inner) {
-        this.computedValue = resolve(this.inner)
+        this.outputValue = resolve(this.inner)
       }
     }
-    return this.computedValue
+    return this.outputValue
   },
   broadcast: function () {
     // cache listeners in case modified during broadcast
     var listeners = this.listeners.slice(0)
     for (var i = 0, len = listeners.length; i < len; i++) {
-      listeners[i](this.computedValue)
+      listeners[i](this.outputValue)
     }
   }
 }
