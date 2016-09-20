@@ -173,11 +173,22 @@ function Array (defaultValues, opts) {
     sources.forEach(function (obs, i) {
       releases[i] = bind(obs)
     })
+
+    if (opts && opts.onListen) {
+      var release = opts.onListen()
+      if (typeof release === 'function') {
+        releases.push(release)
+      }
+    }
   }
 
   function unlisten () {
     releases.forEach(tryInvoke)
     releases.length = 0
+
+    if (opts && opts.onUnlisten) {
+      opts.onUnlisten()
+    }
   }
 
   function update () {
