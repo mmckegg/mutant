@@ -84,7 +84,10 @@ ProtoComputed.prototype = {
       this.lazy = true
 
       if (this.opts && this.opts.onListen) {
-        this.opts.onListen()
+        var release = this.opts.onListen()
+        if (typeof release === 'function') {
+          this.releases.push(release)
+        }
       }
     }
   },

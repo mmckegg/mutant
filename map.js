@@ -57,7 +57,10 @@ function Map (obs, lambda, opts) {
     })
 
     if (opts && opts.onListen) {
-      opts.onListen()
+      var release = opts.onListen()
+      if (typeof release === 'function') {
+        releases.push(release)
+      }
     }
   }
 
