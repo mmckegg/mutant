@@ -110,27 +110,44 @@ function Array (defaultValues, opts) {
   }
 
   observable.set = function (values) {
+    var changed = false
     if (fixedIndexing) {
       var length = values && values.length || 0
       for (var i = 0; i < length; i++) {
-        if (!sources[i]) {
-          var valueOrObs = getObsValue(values[i])
-          sources[i] = valueOrObs
-          object[i] = resolve(valueOrObs)
-          if (binder.live) {
-            releases[i] = bind(valueOrObs)
+        if (isObservable(values[i])) {
+          if (values[i] !== sources[i]) {
+            tryInvoke(releases[index])
+            sources[i] = values[i]
+            changed = true
+            if (binder.live) {
+              releases[i] = bind(sources[i])
+            }
+          }
+        } else if (sources[i] && sources[i]._type === 'MutantArrayValue') {
+          if (!isSame(sources[i](), values[i], comparer)) {
+            sources[i].set(values[i])
+            changed = true
           }
         } else {
-          sources[i].set(values[i])
+          tryInvoke(releases[index])
+          sources[i] = getObsValue(values[i])
+          changed = true
+          if (binder.live) {
+            releases[i] = bind(sources[i])
+          }
         }
       }
       for (var index = length; index < sources.length; index++) {
         tryInvoke(releases[index])
+        changed = true
       }
-      releases.length = length
-      sources.length = length
-      object.length = length
-      binder.broadcast()
+
+      if (changed) {
+        releases.length = length
+        sources.length = length
+        object.length = length
+        binder.broadcast()
+      }
     } else {
       unlisten()
       sources.length = 0
@@ -151,6 +168,7 @@ function Array (defaultValues, opts) {
   function getObsValue (valueOrObs) {
     if (fixedIndexing && !isObservable(valueOrObs)) {
       valueOrObs = Value(valueOrObs)
+      valueOrObs._type = 'MutantArrayValue'
     }
     return valueOrObs
   }
