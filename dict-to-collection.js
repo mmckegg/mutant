@@ -16,6 +16,9 @@ module.exports = function DictToCollection (obs) {
       var key = keys[i]
       var item = obs.get(key)
       if (shouldUpdate(item, raw[i])) {
+        if (raw[i].key() !== key) {
+          raw[i].key.set(key)
+        }
         if (raw[i].value !== item) {
           raw[i].value.set(item)
         }
