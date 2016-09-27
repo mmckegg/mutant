@@ -50,7 +50,7 @@ function Map (obs, lambda, opts) {
     }
     rebindAll()
 
-    Array.from(itemInvalidators.values).forEach(function (invalidators) {
+    Array.from(itemInvalidators.values()).forEach(function (invalidators) {
       invalidators.forEach(function (invalidator) {
         invalidator.release = invalidator.observable(invalidate.bind(null, invalidator))
       })
@@ -70,7 +70,7 @@ function Map (obs, lambda, opts) {
     }
     rebindAll()
 
-    Array.from(itemInvalidators.values).forEach(function (invalidators) {
+    Array.from(itemInvalidators.values()).forEach(function (invalidators) {
       invalidators.forEach(invokeRelease)
     })
 
