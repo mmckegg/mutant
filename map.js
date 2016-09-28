@@ -199,6 +199,7 @@ function Map (obs, lambda, opts) {
       }
     }
     if (changed) {
+      Array.from(rawSet.values()).filter(notIncluded, raw).forEach(removeMapped)
       binder.broadcast()
     }
   }
