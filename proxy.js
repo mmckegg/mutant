@@ -49,7 +49,7 @@ function Proxy (source) {
   }
 
   function update () {
-    binder.value = resolve(source) || {}
+    binder.value = resolve(source)
     return true
   }
 }
