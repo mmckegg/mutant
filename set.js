@@ -3,99 +3,113 @@ var LazyWatcher = require('./lib/lazy-watcher')
 module.exports = Set
 
 function Set (defaultValues) {
-  var object = []
-  var sources = []
-  var releases = []
+  var instance = new ProtoSet(defaultValues)
+  var observable = instance.MutantSet.bind(instance)
+  observable.add = instance.add.bind(instance)
+  observable.clear = instance.clear.bind(instance)
+  observable.delete = instance.delete.bind(instance)
+  observable.has = instance.has.bind(instance)
+  observable.set = instance.set.bind(instance)
+  observable.get = instance.get.bind(instance)
+  observable.getLength = instance.getLength.bind(instance)
+  return observable
+}
 
-  var binder = LazyWatcher(update, listen, unlisten)
-  binder.value = object
+// optimise memory usage
+function ProtoSet (defaultValues) {
+  var self = this
+  self.object = []
+  self.sources = []
+  self.releases = []
+  self.binder = LazyWatcher.call(self, self._update, self._listen, self._unlisten)
+  self.binder.value = this.object
 
   if (defaultValues && defaultValues.length) {
     defaultValues.forEach(function (valueOrObs) {
-      if (!~sources.indexOf(valueOrObs)) {
-        sources.push(valueOrObs)
+      if (!~self.sources.indexOf(valueOrObs)) {
+        self.sources.push(valueOrObs)
       }
     })
-    update()
+    this.update()
   }
+}
 
-  var observable = function MutantSet (listener) {
-    if (!listener) {
-      return binder.getValue()
+ProtoSet.prototype.MutantSet = function (listener) {
+  if (!listener) {
+    return this.binder.getValue()
+  }
+  return this.binder.addListener(listener)
+}
+
+ProtoSet.prototype.add = function (valueOrObs) {
+  if (!~this.sources.indexOf(valueOrObs)) {
+    this.sources.push(valueOrObs)
+    if (this.binder.live) {
+      this.releases[this.sources.length - 1] = this._bind(valueOrObs)
     }
-    return binder.addListener(listener)
+    this.binder.onUpdate()
   }
+}
 
-  observable.add = function (valueOrObs) {
-    if (!~sources.indexOf(valueOrObs)) {
-      sources.push(valueOrObs)
-      if (binder.live) {
-        releases[sources.length - 1] = bind(valueOrObs)
-      }
-      binder.onUpdate()
-    }
+ProtoSet.prototype.clear = function () {
+  this.releases.forEach(tryInvoke)
+  this.sources.length = 0
+  this.releases.length = 0
+  this.binder.onUpdate()
+}
+
+ProtoSet.prototype.delete = function (valueOrObs) {
+  var index = this.sources.indexOf(valueOrObs)
+  if (~index) {
+    this.sources.splice(index, 1)
+    this.releases.splice(index, 1).forEach(tryInvoke)
+    this.binder.onUpdate()
   }
+}
 
-  observable.clear = function () {
-    releases.forEach(tryInvoke)
-    sources.length = 0
-    releases.length = 0
-    binder.onUpdate()
-  }
+ProtoSet.prototype.has = function (valueOrObs) {
+  return !!~this.object.indexOf(valueOrObs)
+}
 
-  observable.delete = function (valueOrObs) {
-    var index = sources.indexOf(valueOrObs)
-    if (~index) {
-      sources.splice(index, 1)
-      releases.splice(index, 1).forEach(tryInvoke)
-      binder.onUpdate()
-    }
-  }
+ProtoSet.prototype.set = function (values) {
+  var self = this
+  self.sources.length = 0
+  values.forEach(function (value) {
+    self.sources.push(value)
+  })
+  self.binder.onUpdate()
+}
 
-  observable.has = function (valueOrObs) {
-    return !!~object.indexOf(valueOrObs)
-  }
+ProtoSet.prototype.get = function (index) {
+  return this.sources[index]
+}
 
-  observable.set = function (values) {
-    sources.length = 0
-    values.forEach(function (value) {
-      sources.push(value)
-    })
-    binder.onUpdate()
-  }
+ProtoSet.prototype.getLength = function () {
+  return this.sources.length
+}
 
-  observable.get = function (index) {
-    return sources[index]
-  }
+ProtoSet.prototype._bind = function (valueOrObs) {
+  return typeof valueOrObs === 'function' ? valueOrObs(this.binder.onUpdate) : null
+}
 
-  observable.getLength = function () {
-    return sources.length
-  }
+ProtoSet.prototype._listen = function () {
+  var self = this
+  self.sources.forEach(function (obs, i) {
+    self.releases[i] = self._bind(obs)
+  })
+}
 
-  return observable
+ProtoSet.prototype._unlisten = function () {
+  this.releases.forEach(tryInvoke)
+  this.releases.length = 0
+}
 
-  function bind (valueOrObs) {
-    return typeof valueOrObs === 'function' ? valueOrObs(binder.onUpdate) : null
-  }
-
-  function listen () {
-    sources.forEach(function (obs, i) {
-      releases[i] = bind(obs)
-    })
-  }
-
-  function unlisten () {
-    releases.forEach(tryInvoke)
-    releases.length = 0
-  }
-
-  function update () {
-    var currentValues = object.map(get)
-    var newValues = sources.map(resolve)
-    currentValues.filter(notIncluded, newValues).forEach(removeFrom, object)
-    newValues.filter(notIncluded, currentValues).forEach(addTo, object)
-    return true
-  }
+ProtoSet.prototype._update = function () {
+  var currentValues = this.object.map(get)
+  var newValues = this.sources.map(resolve)
+  currentValues.filter(notIncluded, newValues).forEach(removeFrom, this.object)
+  newValues.filter(notIncluded, currentValues).forEach(addTo, this.object)
+  return true
 }
 
 function get (value) {
