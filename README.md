@@ -1,7 +1,7 @@
 mutant
 ===
 
-Create observables and map them to DOM elements. Massively inspired by `hyperscript` and `observ-*`.
+Create observables and map them to DOM elements. Massively inspired by [hyperscript](https://github.com/dominictarr/hyperscript) and [`observ-*`](https://github.com/Raynos/observ).
 
 No virtual dom, just direct observable bindings. Unnecessary garbage collection is avoided by using mutable objects instead of blasting immutable junk all over the place.
 
