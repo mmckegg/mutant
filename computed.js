@@ -177,7 +177,11 @@ ProtoComputed.prototype = {
   getValue: function () {
     if (!this.live || this.lazy || this.updating) {
       this.lazy = false
-      this.update()
+      if (this.opts && this.opts.nextTick && this.live && this.lazy) {
+        this.onUpdate() // use cached value to make more responsive
+      } else {
+        this.update()
+      }
       if (this.inner) {
         this.outputValue = resolve(this.inner)
       }
