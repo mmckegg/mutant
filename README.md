@@ -1,5 +1,4 @@
-mutant
-===
+# mutant
 
 Create observables and map them to DOM elements. Massively inspired by [hyperscript](https://github.com/dominictarr/hyperscript) and [`observ-*`](https://github.com/Raynos/observ).
 
@@ -86,3 +85,7 @@ setInterval(function () {
 
 document.body.appendChild(element)
 ```
+
+## License
+
+MIT

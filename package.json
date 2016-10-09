@@ -1,16 +1,31 @@
 {
   "name": "@mmckegg/mutant",
   "version": "3.5.1",
-  "description": "",
-  "main": "array.js",
-  "directories": {
-    "test": "test"
-  },
+  "description": "Create observables and map them to DOM elements. Massively inspired by hyperscript and observ-*. No virtual dom, just direct observable bindings. Unnecessary garbage collection is avoided by using mutable objects instead of blasting immutable junk all over the place.",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Matt McKegg",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mmckegg/mutant.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mmckegg/mutant/issues"
+  },
+  "license": "MIT",
+  "keywords": [
+    "observ",
+    "realtime",
+    "computed",
+    "mutable",
+    "mutate",
+    "dom",
+    "gc",
+    "hyperscript",
+    "frp",
+    "graph"
+  ],
   "dependencies": {
     "browser-split": "0.0.1"
   }
