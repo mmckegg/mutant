@@ -74,9 +74,11 @@ ProtoSet.prototype.has = function (valueOrObs) {
 ProtoSet.prototype.set = function (values) {
   var self = this
   self.sources.length = 0
-  values.forEach(function (value) {
-    self.sources.push(value)
-  })
+  if (Array.isArray(values)) {
+    values.forEach(function (value) {
+      self.sources.push(value)
+    })
+  }
   self.binder.onUpdate()
 }
 
