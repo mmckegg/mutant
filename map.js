@@ -141,7 +141,7 @@ function Map (obs, lambda, opts) {
   function flushQueue () {
     var startedAt = Date.now()
     while (queue.length && (!maxTime || Date.now() - startedAt < maxTime)) {
-      updateItem(queue.pop())
+      updateItem(queue.shift())
     }
     binder.broadcast()
     if (queue.length) {
