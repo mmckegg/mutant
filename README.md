@@ -120,7 +120,7 @@ Once again, similar to the observ and observable implementations. It has a few k
 
 ### mutant/struct
 
-Basically the same as [observ-struct](https://github.com/raynos/observ-struct) except that it always emits the same object (with the properties changed). This means it violates immutability, but the trade-off is less garbage collection. The rest of the mutant helpers can handle this case pretty well.
+Mostly the same as [observ-struct](https://github.com/raynos/observ-struct) except that it always emits the same object (with the properties changed). This means it violates immutability, but the trade-off is less garbage collection. The rest of the mutant helpers can handle this case pretty well.
 
 They accept a set list of keys that specify types. For example:
 
