@@ -3,8 +3,11 @@ var computed = require('./computed')
 var KeyValue = require('./lib/key-value')
 var resolve = require('./resolve')
 var isObservable = require('./is-observable')
+var MutantMap = require('./map')
 
-module.exports = function DictToCollection (obs) {
+module.exports = DictToCollection
+
+function DictToCollection (obs) {
   var value = []
   var raw = []
 
@@ -40,6 +43,12 @@ module.exports = function DictToCollection (obs) {
   addCollectionMethods(result, raw, instance.checkUpdated)
 
   return result
+}
+
+module.exports.values = function (obs) {
+  return MutantMap(DictToCollection(obs), function (item) {
+    return item.value
+  })
 }
 
 function shouldUpdate (newItem, keyValue) {
