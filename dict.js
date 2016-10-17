@@ -19,6 +19,10 @@ function Dict (defaultValues, opts) {
   var binder = LazyWatcher(update, listen, unlisten)
   binder.value = object
 
+  if (opts && opts.nextTick) {
+    binder.nextTick = true
+  }
+
   if (defaultValues) {
     forEachPair(defaultValues, put)
   }

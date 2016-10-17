@@ -16,6 +16,10 @@ function Struct (properties, opts) {
   var binder = LazyWatcher(update, listen, unlisten)
   binder.value = object
 
+  if (opts && opts.nextTick) {
+    binder.nextTick = true
+  }
+
   var comparer = opts && opts.comparer || null
 
   var observable = function MutantStruct (listener) {

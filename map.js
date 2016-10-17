@@ -12,6 +12,10 @@ function Map (obs, lambda, opts) {
   var releases = []
   var binder = LazyWatcher(update, listen, unlisten)
 
+  if (opts && opts.nextTick) {
+    binder.nextTick = true
+  }
+
   var itemInvalidators = new global.Map()
   var lastValues = new global.Map()
   var rawSet = new global.Set()
@@ -205,23 +209,25 @@ function Map (obs, lambda, opts) {
   }
 
   function updateItem (i) {
-    var item = get(obs, i)
-    if (!lastValues.has(item) || !isSame(item, item, comparer)) {
-      if (itemInvalidators.has(item)) {
-        itemInvalidators.get(item).forEach(invokeRelease)
-        itemInvalidators.delete(item)
+    if (i < getLength(obs)) {
+      var item = get(obs, i)
+      if (!lastValues.has(item) || !isSame(item, item, comparer)) {
+        if (itemInvalidators.has(item)) {
+          itemInvalidators.get(item).forEach(invokeRelease)
+          itemInvalidators.delete(item)
+        }
+        var newValue = lambda(item, addInvalidateCallback(item))
+        if (newValue !== raw[i]) {
+          raw[i] = newValue
+        }
+        rawSet.add(newValue)
+        lastValues.set(item, raw[i])
+        rebind(i)
+      } else {
+        raw[i] = lastValues.get(item)
       }
-      var newValue = lambda(item, addInvalidateCallback(item))
-      if (newValue !== raw[i]) {
-        raw[i] = newValue
-      }
-      rawSet.add(newValue)
-      lastValues.set(item, raw[i])
-      rebind(i)
-    } else {
-      raw[i] = lastValues.get(item)
+      values[i] = resolve(raw[i])
     }
-    values[i] = resolve(raw[i])
   }
 
   function rebind (index) {
@@ -291,10 +297,6 @@ function notIncluded (value) {
     }
   }
   return true
-}
-
-function deleteEntry (entry) {
-  this.delete(entry)
 }
 
 function invokeRelease (item) {

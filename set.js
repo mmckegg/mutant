@@ -2,8 +2,8 @@ var LazyWatcher = require('./lib/lazy-watcher')
 
 module.exports = Set
 
-function Set (defaultValues) {
-  var instance = new ProtoSet(defaultValues)
+function Set (defaultValues, opts) {
+  var instance = new ProtoSet(defaultValues, opts)
   var observable = instance.MutantSet.bind(instance)
   observable.add = instance.add.bind(instance)
   observable.clear = instance.clear.bind(instance)
@@ -16,13 +16,17 @@ function Set (defaultValues) {
 }
 
 // optimise memory usage
-function ProtoSet (defaultValues) {
+function ProtoSet (defaultValues, opts) {
   var self = this
   self.object = []
   self.sources = []
   self.releases = []
   self.binder = LazyWatcher.call(self, self._update, self._listen, self._unlisten)
   self.binder.value = this.object
+
+  if (opts && opts.nextTick) {
+    self.binder.nextTick = true
+  }
 
   if (defaultValues && defaultValues.length) {
     defaultValues.forEach(function (valueOrObs) {

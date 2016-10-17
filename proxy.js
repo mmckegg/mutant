@@ -4,11 +4,15 @@ var isObservable = require('./is-observable')
 
 module.exports = Proxy
 
-function Proxy (source) {
+function Proxy (source, opts) {
   var releases = []
 
   var binder = LazyWatcher(update, listen, unlisten)
   binder.value = resolve(source)
+
+  if (opts && opts.nextTick) {
+    binder.nextTick = true
+  }
 
   var observable = function MutantProxy (listener) {
     if (!listener) {
