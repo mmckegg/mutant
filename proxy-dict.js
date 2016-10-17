@@ -35,6 +35,14 @@ function ProxyDict (source) {
     }
   }
 
+  observable.has = function (key) {
+    if (isObservable(source) && source.has) {
+      return source.has(key)
+    } else if (resolve(source)) {
+      return key in resolve(source)
+    }
+  }
+
   observable.set = function (newSource) {
     unlisten()
     source = newSource

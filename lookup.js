@@ -69,5 +69,10 @@ function Lookup (obs, lambdaOrKey, opts) {
     return raw[key]
   }
 
+  result.has = function (key) {
+    instance.checkUpdated()
+    return key in raw
+  }
+
   return result
 }
