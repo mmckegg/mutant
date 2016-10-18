@@ -34,7 +34,7 @@ function ProtoSet (defaultValues, opts) {
         self.sources.push(valueOrObs)
       }
     })
-    this.update()
+    this._update()
   }
 }
 
