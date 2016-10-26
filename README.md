@@ -11,7 +11,7 @@ Expect breaking changes.
 ## Used By
 
 - **[Loop Drop](https://github.com/mmckegg/loop-drop-app)**: Live electronic music performance app. MIDI looper, modular synth and sampler app built around Novation Launchpad controller. Powered by Web Audio, Web MIDI, and [electron](https://electron.atom.io).
-- **[Ferment](https://github.com/mmckegg/ferment)**: Peer-to-peer audio sharing and streaming application. Like SoundCloud but decentralized. A mashup of [ssb](https://scuttlebot.io/), [webtorrent](https://webtorrent.io/) and [electron](https://electron.atom.io).
+- **[Ferment](https://github.com/mmckegg/ferment)**: Peer-to-peer audio publishing and streaming application. Like SoundCloud but decentralized. A mashup of [ssb](https://scuttlebot.io/), [webtorrent](https://webtorrent.io/) and [electron](https://electron.atom.io).
 
 ## Install
 
