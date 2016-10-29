@@ -135,7 +135,7 @@ function Map (obs, lambda, opts) {
 
   function queueUpdateItem (i) {
     if (!queue.length) {
-      setImmediate(flushQueue)
+      doSoon(flushQueue)
     }
     if (!~queue.indexOf(i)) {
       queue.push(i)
@@ -149,7 +149,7 @@ function Map (obs, lambda, opts) {
     }
     binder.broadcast()
     if (queue.length) {
-      setImmediate(flushQueue)
+      doSoon(flushQueue)
     }
   }
 
@@ -256,6 +256,14 @@ function Map (obs, lambda, opts) {
         binder.broadcast()
       }
     })
+  }
+
+  function doSoon (fn) {
+    if (opts.delayTime) {
+      setTimeout(fn, opts.delayTime)
+    } else {
+      setImmediate(fn)
+    }
   }
 }
 
