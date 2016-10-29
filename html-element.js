@@ -64,7 +64,7 @@ function appendChild (document, target, data, node) {
   } else {
     node = getNode(document, node)
     target.appendChild(node)
-    if (target.rootNode === document) {
+    if (getRootNode(target) === document) {
       walk(node, rebind)
     }
   }
@@ -72,9 +72,15 @@ function appendChild (document, target, data, node) {
 
 function append (child) {
   this.target.appendChild(child)
-  if (this.target.rootNode === this.document) {
-    walk(child, rebind)
-  }
+  maybeBind(child, this)
+}
+
+function maybeBind (node, opts) {
+  setImmediate(function () {
+    if (getRootNode(opts.target) === opts.document) {
+      walk(node, rebind)
+    }
+  })
 }
 
 function checkWatcher (document) {
@@ -86,6 +92,14 @@ function checkWatcher (document) {
 
 function onMutate (changes) {
   changes.forEach(handleChange)
+}
+
+function getRootNode (el) {
+  var element = el
+  while (element.parentNode) {
+    element = element.parentNode
+  }
+  return element
 }
 
 function handleChange (change) {
