@@ -77,13 +77,31 @@ ProtoSet.prototype.has = function (valueOrObs) {
 
 ProtoSet.prototype.set = function (values) {
   var self = this
-  self.sources.length = 0
+  var changed = false
+
   if (Array.isArray(values)) {
+    for (var i = this.sources.length - 1; i >= 0; i -= 1) {
+      if (!~values.indexOf(this.sources[i])) {
+        changed = true
+        self.sources.splice(i, 1)
+      }
+    }
     values.forEach(function (value) {
-      self.sources.push(value)
+      if (!~self.sources.indexOf(value)) {
+        changed = true
+        self.sources.push(value)
+      }
     })
+  } else {
+    if (self.sources.length > 0) {
+      self.sources.length = 0
+      changed = true
+    }
   }
-  self.binder.onUpdate()
+
+  if (changed) {
+    self.binder.onUpdate()
+  }
 }
 
 ProtoSet.prototype.get = function (index) {
