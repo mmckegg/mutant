@@ -14,7 +14,7 @@ function Lookup (obs, lambdaOrKey, opts) {
         return value // passthru
       } else if (Array.isArray(value)) {
         return KeyValue(value[0], value[1])
-      } else {
+      } else if (value != null) {
         return KeyValue(value, item)
       }
     } else if (typeof lambdaOrKey === 'string') {
