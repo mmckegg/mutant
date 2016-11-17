@@ -193,17 +193,21 @@ function Map (obs, lambda, opts) {
   }
 
   function invalidate (entry) {
-    var changed = false
+    var changed = []
     var length = getLength(obs)
     lastValues.delete(entry.item)
     for (var i = 0; i < length; i++) {
       if (get(obs, i) === entry.item) {
-        updateItem(i)
-        changed = true
+        changed.push(i)
       }
     }
-    if (changed) {
-      Array.from(rawSet.values()).filter(notIncluded, raw).forEach(removeMapped)
+    if (changed.length) {
+      var rawValue = raw[changed[0]]
+      changed.forEach((index) => { raw[index] = null })
+      if (!raw.includes(rawValue)) {
+        removeMapped(rawValue)
+      }
+      changed.forEach(updateItem)
       binder.broadcast()
     }
   }
