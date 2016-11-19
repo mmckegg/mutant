@@ -1,6 +1,6 @@
 var queue = []
 var running = false
-var max = 1 / 60 / 2
+var max = 1000 / 60
 
 module.exports = function (fn) {
   if (typeof fn !== 'function') {
@@ -9,7 +9,7 @@ module.exports = function (fn) {
   queue.push(fn)
   if (!running) {
     running = true
-    window.requestAnimationFrame(flush)
+    window.requestIdleCallback(flush)
   }
 }
 
@@ -21,7 +21,7 @@ function flush () {
   }
 
   if (queue.length) {
-    window.requestAnimationFrame(flush)
+    window.requestIdleCallback(flush)
   } else {
     running = false
   }

@@ -8,6 +8,7 @@
 var resolve = require('./resolve')
 var isObservable = require('./is-observable')
 var isSame = require('./lib/is-same')
+var onceIdle = require('./once-idle')
 
 module.exports = computed
 
@@ -151,7 +152,12 @@ ProtoComputed.prototype = {
     return false
   },
   onUpdate: function () {
-    if (this.opts && this.opts.nextTick) {
+    if (this.opts && this.opts.idle) {
+      if (!this.updating) {
+        this.updating = true
+        onceIdle(this.boundUpdateNow)
+      }
+    } else if (this.opts && this.opts.nextTick) {
       if (!this.updating) {
         this.updating = true
         setImmediate(this.boundUpdateNow)

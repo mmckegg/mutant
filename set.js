@@ -24,9 +24,8 @@ function ProtoSet (defaultValues, opts) {
   self.binder = LazyWatcher.call(self, self._update, self._listen, self._unlisten)
   self.binder.value = this.object
 
-  if (opts && opts.nextTick) {
-    self.binder.nextTick = true
-  }
+  if (opts && opts.nextTick) self.binder.nextTick = true
+  if (opts && opts.idle) self.binder.idle = true
 
   if (defaultValues && defaultValues.length) {
     defaultValues.forEach(function (valueOrObs) {

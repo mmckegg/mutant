@@ -10,9 +10,8 @@ function Proxy (source, opts) {
   var binder = LazyWatcher(update, listen, unlisten)
   binder.value = resolve(source)
 
-  if (opts && opts.nextTick) {
-    binder.nextTick = true
-  }
+  if (opts && opts.nextTick) binder.nextTick = true
+  if (opts && opts.idle) binder.idle = true
 
   var observable = function MutantProxy (listener) {
     if (!listener) {

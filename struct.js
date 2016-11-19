@@ -16,9 +16,8 @@ function Struct (properties, opts) {
   var binder = LazyWatcher(update, listen, unlisten)
   binder.value = object
 
-  if (opts && opts.nextTick) {
-    binder.nextTick = true
-  }
+  if (opts && opts.nextTick) binder.nextTick = true
+  if (opts && opts.idle) binder.idle = true
 
   var comparer = opts && opts.comparer || null
 

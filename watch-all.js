@@ -1,5 +1,6 @@
 var resolve = require('./resolve')
 var isObservable = require('./is-observable')
+var onceIdle = require('./once-idle')
 
 module.exports = watchAll
 
@@ -19,7 +20,12 @@ function watchAll (observables, listener, opts) {
   }
 
   function broadcast () {
-    if (opts && opts.nextTick) {
+    if (opts && opts.idle) {
+      if (!broadcasting) {
+        broadcasting = true
+        onceIdle(broadcastNow)
+      }
+    } else if (opts && opts.nextTick) {
       if (!broadcasting) {
         broadcasting = true
         setImmediate(broadcastNow)

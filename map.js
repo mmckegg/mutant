@@ -2,6 +2,7 @@ var resolve = require('./resolve')
 var LazyWatcher = require('./lib/lazy-watcher')
 var isSame = require('./lib/is-same')
 var addCollectionMethods = require('./lib/add-collection-methods')
+var onceIdle = require('./once-idle')
 
 module.exports = Map
 
@@ -12,9 +13,8 @@ function Map (obs, lambda, opts) {
   var releases = []
   var binder = LazyWatcher(update, listen, unlisten)
 
-  if (opts && opts.nextTick) {
-    binder.nextTick = true
-  }
+  if (opts && opts.nextTick) binder.nextTick = true
+  if (opts && opts.idle) binder.idle = true
 
   var itemInvalidators = new global.Map()
   var lastValues = new global.Map()
@@ -263,7 +263,9 @@ function Map (obs, lambda, opts) {
   }
 
   function doSoon (fn) {
-    if (opts.delayTime) {
+    if (opts.idle) {
+      onceIdle(fn)
+    } else if (opts.delayTime) {
       setTimeout(fn, opts.delayTime)
     } else {
       setImmediate(fn)
