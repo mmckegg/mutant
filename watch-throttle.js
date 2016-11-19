@@ -1,16 +1,21 @@
 var resolve = require('./resolve')
 var isObservable = require('./is-observable')
 
-module.exports = function throttledWatch (obs, minDelay, listener) {
+module.exports = function throttledWatch (obs, minDelay, listener, opts) {
   var throttling = false
   var lastRefreshAt = 0
   var lastValueAt = 0
   var throttleTimer = null
 
+  var broadcastInitial = !opts || opts.broadcastInitial !== false
+
   // default delay is 20 ms
   minDelay = minDelay || 20
 
-  listener(resolve(obs))
+  // run unless opts.broadcastInitial === false
+  if (broadcastInitial) {
+    listener(resolve(obs))
+  }
 
   if (isObservable(obs)) {
     return obs(function (v) {
