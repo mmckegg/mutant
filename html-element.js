@@ -4,6 +4,8 @@ var parseTag = require('./lib/parse-tag')
 var walk = require('./lib/walk')
 var watch = require('./watch')
 var caches = new global.WeakMap()
+var bindQueue = []
+var currentlyBinding = false
 var watcher = null
 var invalidateNextTick = require('./lib/invalidate-next-tick')
 
@@ -76,11 +78,23 @@ function append (child) {
 }
 
 function maybeBind (node, opts) {
-  setImmediate(function () {
+  bindQueue.push([node, opts])
+  if (!currentlyBinding) {
+    currentlyBinding = true
+    setImmediate(flushBindQueue)
+  }
+}
+
+function flushBindQueue () {
+  currentlyBinding = false
+  while (bindQueue.length) {
+    var item = bindQueue.shift()
+    var node = item[0]
+    var opts = item[1]
     if (getRootNode(opts.target) === opts.document) {
       walk(node, rebind)
     }
-  })
+  }
 }
 
 function checkWatcher (document) {
