@@ -203,7 +203,9 @@ function Map (obs, lambda, opts) {
     }
     if (changed.length) {
       var rawValue = raw[changed[0]]
-      changed.forEach((index) => { raw[index] = null })
+      changed.forEach(function (index) {
+        raw[index] = null
+      })
       if (!raw.includes(rawValue)) {
         removeMapped(rawValue)
       }
