@@ -54,6 +54,16 @@ test('#insert inserts element at index and calls subscriber', function(t) {
   array.insert('dog', 0)
 })
 
+test('#delete removes element and calls subscriber', function(t) {
+  var expected = ['dog']
+  var array = MutantArray(['cat', 'dog'])
+  array(actual => {
+    t.deepEqual(actual, expected)
+    t.end()
+  })
+  array.delete('cat')
+})
+
 test('Array will call subscriber when an observable in the array is updated', function(t) {
   var obs = MutantValue(1)
   var array = MutantArray([obs])
