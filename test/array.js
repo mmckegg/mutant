@@ -54,7 +54,7 @@ test('#insert inserts element at index and calls subscriber', function(t) {
   array.insert('dog', 0)
 })
 
-test('#delete removes element and calls subscriber', function(t) {
+test('#delete removes basic element and calls subscriber', function(t) {
   var expected = ['dog']
   var array = MutantArray(['cat', 'dog'])
   array(actual => {
@@ -62,6 +62,20 @@ test('#delete removes element and calls subscriber', function(t) {
     t.end()
   })
   array.delete('cat')
+})
+
+test('#delete when deleting an observable in an array, remaining observables still call their subscribers', function(t) {
+  t.plan(3)
+  var cat = MutantValue('cat')
+  cat(t.ok)
+
+  var dog = MutantValue('dog')
+  dog(t.fail)
+
+  var array = MutantArray([cat, dog])
+  array(t.ok)
+  array.delete(dog) //array will emit
+  cat.set('Kool kat') //array and cat will emit.
 })
 
 test('Array will call subscriber when an observable in the array is updated', function(t) {
