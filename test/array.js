@@ -34,6 +34,17 @@ test('Observable calls multiple subscribers with latest when updated with set', 
   array.set(expected)
 })
 
+test('Array will call subscriber when an observable in the array is updated', function(t) {
+  var obs = MutantValue(1)
+  var array = MutantArray([obs])
+  array(arr => {
+    actual = arr[0] 
+    t.equal(actual, 2)
+    t.end()
+  })
+  obs.set(2)
+})
+
 test('#push inserts a new element and calls subscriber', function(t) {
   var expected = ['cat','dog']
   var array = MutantArray(['cat'])
@@ -53,6 +64,7 @@ test('#insert inserts element at index and calls subscriber', function(t) {
   })
   array.insert('dog', 0)
 })
+
 
 test('#delete removes basic element and calls subscriber', function(t) {
   var expected = ['dog']
@@ -78,13 +90,3 @@ test('#delete when deleting an observable in an array, remaining observables sti
   cat.set('Kool kat') //array and cat will emit.
 })
 
-test('Array will call subscriber when an observable in the array is updated', function(t) {
-  var obs = MutantValue(1)
-  var array = MutantArray([obs])
-  array(arr => {
-    actual = arr[0] 
-    t.equal(actual, 2)
-    t.end()
-  })
-  obs.set(2)
-})
