@@ -228,10 +228,10 @@ function Map (obs, lambda, opts) {
         }
         rawSet.add(newValue)
         lastValues.set(item, raw[i])
-        rebind(i)
       } else {
         raw[i] = lastValues.get(item)
       }
+      rebind(i)
       values[i] = resolve(raw[i])
     }
   }
