@@ -16,7 +16,6 @@ module.exports = {
   'mapped-dict': require('./mapped-dict'),
   'merge': require('./merge'),
   'once-idle': require('./once-idle'),
-  'package': require('./package'),
   'proxy-collection': require('./proxy-collection'),
   'proxy-dict': require('./proxy-dict'),
   'proxy': require('./proxy'),
