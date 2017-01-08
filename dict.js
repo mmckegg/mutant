@@ -131,6 +131,13 @@ function Dict (defaultValues, opts) {
     Object.keys(sources).forEach(function (key) {
       releases[key] = bind(sources[key])
     })
+
+    if (opts && opts.onListen) {
+      var release = opts.onListen()
+      if (typeof release === 'function') {
+        releases.push(release)
+      }
+    }
   }
 
   function unlisten () {
@@ -138,6 +145,10 @@ function Dict (defaultValues, opts) {
       tryInvoke(releases[key])
       delete releases[key]
     })
+
+    if (opts && opts.onUnlisten) {
+      opts.onUnlisten()
+    }
   }
 
   function update () {
