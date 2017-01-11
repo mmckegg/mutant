@@ -129,12 +129,13 @@ function Dict (defaultValues, opts) {
 
   function listen () {
     Object.keys(sources).forEach(function (key) {
-      releases[key] = bind(sources[key])
+      releases[key] = null
     })
 
     if (opts && opts.onListen) {
       var release = opts.onListen()
       if (typeof release === 'function') {
+        // isn't releases an object? how are you pushing into it?
         releases.push(release)
       }
     }
