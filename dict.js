@@ -11,9 +11,10 @@ module.exports = Dict
 function Dict (defaultValues, opts) {
   var object = Object.create({})
   var sources = {}
-  var releases = {}
+  var objectReleases = {}
   var fixedIndexing = opts && opts.fixedIndexing || false
 
+  var releases = []
   var comparer = opts && opts.comparer || null
 
   var binder = LazyWatcher(update, listen, unlisten)
@@ -44,18 +45,18 @@ function Dict (defaultValues, opts) {
 
   observable.clear = function () {
     Object.keys(sources).forEach(function (key) {
-      tryInvoke(releases[key])
+      tryInvoke(objectReleases[key])
       delete sources[key]
-      delete releases[key]
+      delete objectReleases[key]
       delete object[key]
     })
     binder.broadcast()
   }
 
   observable.delete = function (key) {
-    tryInvoke(releases[key])
+    tryInvoke(objectReleases[key])
     delete sources[key]
-    delete releases[key]
+    delete objectReleases[key]
     delete object[key]
     binder.broadcast()
   }
@@ -79,17 +80,17 @@ function Dict (defaultValues, opts) {
 
       Object.keys(sources).forEach(function (key) {
         if (!keys.includes(key)) {
-          tryInvoke(releases[key])
+          tryInvoke(objectReleases[key])
           delete sources[key]
-          delete releases[key]
+          delete objectReleases[key]
           delete object[key]
         }
       })
     } else {
       Object.keys(sources).forEach(function (key) {
-        tryInvoke(releases[key])
+        tryInvoke(objectReleases[key])
         delete sources[key]
-        delete releases[key]
+        delete objectReleases[key]
         delete object[key]
       })
 
@@ -110,10 +111,10 @@ function Dict (defaultValues, opts) {
   }
 
   function put (key, valueOrObs) {
-    tryInvoke(releases[key])
+    tryInvoke(objectReleases[key])
     sources[key] = valueOrObs
     if (binder.live) {
-      releases[key] = bind(key, valueOrObs)
+      objectReleases[key] = bind(key, valueOrObs)
     }
     object[key] = resolve(valueOrObs)
   }
@@ -129,7 +130,7 @@ function Dict (defaultValues, opts) {
 
   function listen () {
     Object.keys(sources).forEach(function (key) {
-      releases[key] = bind(sources[key])
+      objectReleases[key] = bind(sources[key])
     })
 
     if (opts && opts.onListen) {
@@ -142,9 +143,13 @@ function Dict (defaultValues, opts) {
 
   function unlisten () {
     Object.keys(sources).forEach(function (key) {
-      tryInvoke(releases[key])
-      delete releases[key]
+      tryInvoke(objectReleases[key])
+      delete objectReleases[key]
     })
+
+    while (releases.length) {
+      tryInvoke(releases.pop())
+    }
 
     if (opts && opts.onUnlisten) {
       opts.onUnlisten()

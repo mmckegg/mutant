@@ -22,10 +22,14 @@ types.forEach(ctor => {
   test(`${ctor.name} - onListen / onUnlisten`, t => {
     var onListenCount = 0
     var onUnlistenCount = 0
+    var onListenReleaseCount = 0
 
     var obs = ctor({
       onListen: () => {
         onListenCount += 1
+        return () => {
+          onListenReleaseCount += 1
+        }
       },
       onUnlisten: () => {
         onUnlistenCount += 1
@@ -45,12 +49,14 @@ types.forEach(ctor => {
 
     unlisten2()
     t.equal(onUnlistenCount, 1)
+    t.equal(onListenReleaseCount, 1)
 
     var unlisten3 = obs(() => {})
     t.equal(onListenCount, 2)
 
     unlisten3()
     t.equal(onUnlistenCount, 2)
+    t.equal(onListenReleaseCount, 2)
 
     t.end()
   })

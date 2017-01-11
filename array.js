@@ -11,9 +11,10 @@ module.exports = Array
 function Array (defaultValues, opts) {
   var object = []
   var sources = []
-  var releases = []
+  var objectReleases = []
   var fixedIndexing = opts && opts.fixedIndexing || false
 
+  var releases = []
   var comparer = opts && opts.comparer || null
 
   var binder = LazyWatcher(update, listen, unlisten)
@@ -55,8 +56,8 @@ function Array (defaultValues, opts) {
     sources[index] = valueOrObs
     object[index] = resolve(valueOrObs)
     if (binder.live) {
-      tryInvoke(releases[index])
-      releases[index] = bind(valueOrObs)
+      tryInvoke(objectReleases[index])
+      objectReleases[index] = bind(valueOrObs)
     }
     binder.broadcast()
     return valueOrObs
@@ -65,7 +66,7 @@ function Array (defaultValues, opts) {
   observable.insert = function (valueOrObs, at) {
     valueOrObs = getObsValue(valueOrObs)
     sources.splice(at, 0, valueOrObs)
-    if (binder.live) releases.splice(at, 0, bind(valueOrObs))
+    if (binder.live) objectReleases.splice(at, 0, bind(valueOrObs))
     object.splice(at, 0, resolve(valueOrObs))
     binder.broadcast()
     return valueOrObs
@@ -73,7 +74,7 @@ function Array (defaultValues, opts) {
 
   observable.pop = function () {
     var result = sources.pop()
-    if (binder.live) tryInvoke(releases.pop())
+    if (binder.live) tryInvoke(objectReleases.pop())
     object.pop()
     binder.broadcast()
     return result
@@ -81,16 +82,16 @@ function Array (defaultValues, opts) {
 
   observable.shift = function () {
     var result = sources.shift()
-    if (binder.live) tryInvoke(releases.shift())
+    if (binder.live) tryInvoke(objectReleases.shift())
     object.shift()
     binder.broadcast()
     return result
   }
 
   observable.clear = function () {
-    releases.forEach(tryInvoke)
+    objectReleases.forEach(tryInvoke)
     sources.length = 0
-    releases.length = 0
+    objectReleases.length = 0
     object.length = 0
     binder.broadcast()
   }
@@ -102,7 +103,7 @@ function Array (defaultValues, opts) {
   observable.deleteAt = function (index) {
     if (index >= 0 && index < sources.length) {
       sources.splice(index, 1)
-      if (binder.live) releases.splice(index, 1).forEach(tryInvoke)
+      if (binder.live) objectReleases.splice(index, 1).forEach(tryInvoke)
       object.splice(index, 1)
       binder.broadcast()
     }
@@ -119,11 +120,11 @@ function Array (defaultValues, opts) {
       for (var i = 0; i < length; i++) {
         if (isObservable(values[i])) {
           if (values[i] !== sources[i]) {
-            tryInvoke(releases[index])
+            tryInvoke(objectReleases[index])
             sources[i] = values[i]
             changed = true
             if (binder.live) {
-              releases[i] = bind(sources[i])
+              objectReleases[i] = bind(sources[i])
             }
           }
         } else if (sources[i] && sources[i]._type === 'MutantArrayValue') {
@@ -132,21 +133,21 @@ function Array (defaultValues, opts) {
             changed = true
           }
         } else {
-          tryInvoke(releases[index])
+          tryInvoke(objectReleases[index])
           sources[i] = getObsValue(values[i])
           changed = true
           if (binder.live) {
-            releases[i] = bind(sources[i])
+            objectReleases[i] = bind(sources[i])
           }
         }
       }
       for (var index = length; index < sources.length; index++) {
-        tryInvoke(releases[index])
+        tryInvoke(objectReleases[index])
         changed = true
       }
 
       if (changed) {
-        releases.length = length
+        objectReleases.length = length
         sources.length = length
         object.length = length
         binder.broadcast()
@@ -154,7 +155,7 @@ function Array (defaultValues, opts) {
     } else {
       unlisten()
       sources.length = 0
-      releases.length = 0
+      objectReleases.length = 0
       object.length = 0
       forEach(values, add)
       if (binder.live) {
@@ -181,7 +182,7 @@ function Array (defaultValues, opts) {
     sources.push(valueOrObs)
     object.push(resolve(valueOrObs))
     if (binder.live) {
-      releases.push(bind(valueOrObs))
+      objectReleases.push(bind(valueOrObs))
     }
     return valueOrObs
   }
@@ -192,7 +193,7 @@ function Array (defaultValues, opts) {
 
   function listen () {
     sources.forEach(function (obs, i) {
-      releases[i] = bind(obs)
+      objectReleases[i] = bind(obs)
     })
 
     if (opts && opts.onListen) {
@@ -204,8 +205,12 @@ function Array (defaultValues, opts) {
   }
 
   function unlisten () {
-    releases.forEach(tryInvoke)
-    releases.length = 0
+    objectReleases.forEach(tryInvoke)
+    objectReleases.length = 0
+
+    while (releases.length) {
+      tryInvoke(releases.pop())
+    }
 
     if (opts && opts.onUnlisten) {
       opts.onUnlisten()
