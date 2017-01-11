@@ -130,7 +130,7 @@ function Dict (defaultValues, opts) {
 
   function listen () {
     Object.keys(sources).forEach(function (key) {
-      objectReleases[key] = bind(sources[key])
+      objectReleases[key] = bind(key, sources[key])
     })
 
     if (opts && opts.onListen) {
