@@ -1,32 +1,38 @@
 module.exports = {
+// Types
   'Array': require('./array'),
   'Dict': require('./dict'),
-  'Map': require('./map'),
   'Set': require('./set'),
   'Struct': require('./struct'),
   'Value': require('./value'),
+  'MappedArray': require('./mapped-array'),
+  'MappedDict': require('./mapped-dict'),
+// ProxyTypes
+  'ProxyCollection': require('./proxy-collection'),
+  'ProxyDict': require('./proxy-dict'),
+  'Proxy': require('./proxy'),
+// Transforms
   'computed': require('./computed'),
   'concat': require('./concat'),
   'dictToCollection': require('./dict-to-collection'),
-  'forEach': require('./for-each'),
-  'forEachPair': require('./for-each-pair'),
-  'htmlElement': require('./html-element'),
   'idleProxy': require('./idle-proxy'),
-  'isObservable': require('./is-observable'),
   'keys': require('./keys'),
   'lookup': require('./lookup'),
-  'mappedArray': require('./mapped-array'),
-  'mappedDict': require('./mapped-dict'),
+  'map': require('./map'),
   'merge': require('./merge'),
-  'onceIdle': require('./once-idle'),
-  'proxyCollection': require('./proxy-collection'),
-  'proxyDict': require('./proxy-dict'),
-  'proxy': require('./proxy'),
-  'resolve': require('./resolve'),
-  'send': require('./send'),
   'throttle': require('./throttle'),
+  'when': require('./when'),
+// Sinks
+  'h': require('./html-element'),
+  'HtmlElement': require('./html-element'),
   'watchAll': require('./watch-all'),
   'watch': require('./watch'),
   'watchThrottle': require('./watch-throttle'),
-  'when': require('./when')
+// Helpers
+  'forEach': require('./for-each'),
+  'forEachPair': require('./for-each-pair'),
+  'isObservable': require('./is-observable'),
+  'onceIdle': require('./once-idle'),
+  'resolve': require('./resolve'),
+  'send': require('./send')
 }

@@ -155,6 +155,72 @@ Then there's a bunch of other helper modules that transform the data in differen
 
 But yeah, not really much too it. Just my own personal collection of tools for building interfaces, binding and persisting data (oh and that don't cause audio glitches - which as a side effect means super responsive and smooth scrolling with no "jank")
 
+
+---
+
+Some more (WIP) details
+
+## Types
+
+Observables that store data
+
+- Array
+- Dict
+- Set
+- Struct
+- Value
+- MappedArray
+- MappedDict
+
+## ProxyType
+
+A more advanced feature - allow you to create observable slots which allow you to hot-swap observables in/ out of.
+
+- ProxyCollection
+- ProxyDictionary
+- Proxy
+
+
+## Transforms
+
+Take one or more observables and transform them into an observable
+
+- computed
+- concat
+- dictToCollection
+- idleProxy
+- keys
+- lookup
+- map
+- merge
+- throttle
+- when
+
+
+## Sinks
+
+Stuff that are exit hatches / sinks / make changes in the real world.
+
+- HtmlElement
+- watchAll
+- watchThrottle
+- watch
+
+
+## Helpers
+
+A grab bag of useful things for dealing with mutant stuff.
+A lot of these are used internally, but are useful more generally
+
+- forEachPair
+- forEach
+- isObservable
+- onceIdle
+- resolve
+- send
+
+
 ## License
 
 MIT
+
