@@ -88,6 +88,8 @@ setInterval(function () {
 document.body.appendChild(element)
 ```
 
+---
+
 ## Types
 
 Observables that store data
@@ -151,6 +153,8 @@ This is almost the same as [observable](https://github.com/dominictarr/observabl
 ...
 
 
+---
+
 ## ProxyType
 
 A more advanced feature - allow you to create observable slots which allow you to hot-swap observables in/ out of.
@@ -172,6 +176,8 @@ A more advanced feature - allow you to create observable slots which allow you t
 
 ...
 
+
+---
 
 ## Transforms
 
@@ -247,6 +253,8 @@ One of the most interesting features is its `maxTime` option. This is a ms value
 ...
 
 
+---
+
 ## Sinks
 
 Stuff that are exit hatches / sinks / make changes in the real world.
@@ -281,6 +289,8 @@ In hyperscript you can add [observables](https://github.com/dominictarr/observab
 - This is a generic sink. Almost the same as listening to a value using `value(function (v) { })` except that it emits the initial value too.
 - It also accepts non-observable objects and will just emit their value once and then never all again. Kind of like Promise.resolve(). (I think, never used promises)
 
+
+---
 
 ## Helpers
 
