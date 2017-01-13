@@ -88,38 +88,38 @@ setInterval(function () {
 document.body.appendChild(element)
 ```
 
-## Overview
+---
 
-### mutant/html-element
+## Types
 
-A fancy wrapper around `document.createElement()` that allows you to create DOM elements (entire trees if needed) without setting lots of properties or writing html. It just returns plain old DOM elements that can be added directly to the DOM.
+Observables that store data
 
-This is basically just [hyperscript](https://github.com/dominictarr/hyperscript) with a bunch of small tweaks that make it a lot more memory friendly. I've also enhanced the binding ability.
+- Array
+- Dict
+- Set
+- Struct
+- Value
+- MappedArray
+- MappedDict
 
-In hyperscript you can add [observables](https://github.com/dominictarr/observable) as properties and when the observable value changes, the DOM magically updates. You can also return a DOM element. But in mutant, I've gone an extra step further and allow observables to return **multiple DOM elements**. I've also made "cleanup" (unbinding from events to free memory) automatic. It's a lot like pull streams: the DOM acts as a sink. **If an element created by mutant is not in the DOM, it doesn't listen to its observable properties.** It only resolves them once it is added, and if it is removed unlistens again.
+### Array 
 
-### mutant/value
+Like [observ-array](https://github.com/raynos/observ-array) but as with struct, emits the same object. No constant shallow cloning on every change. You can push observables (or ordinary values) and it will emit whenever any of them change. Works well with mutant/map.
 
-This is almost the same as [observable](https://github.com/dominictarr/observable) and [observ](https://github.com/raynos/observ). There's only a couple of small differences: you can specify a default value (fallback when null) and it will throw if you try and add a non-function as a listener (this one always got me)
+There's also `mutant/set` which is similar but only allows values to exist once.
 
-### mutant/computed
 
-Once again, similar to the observ and observable implementations. It has a few key differences though.
+### Dict
 
-- It will try to avoid computing if its inputs have not changed.
-- It also won't emit a change if the new computed value is the same as the old one. This helps to prevent additional work duplication and render noise downstream.
-- There is an optional "nextTick" mode that queues up change events until nextTick before computing. But if you call it (`value()`) in the current tick, it will compute immediately.
-- It acts like a pull through stream: if it doesn't have a sink, no code is run. It won't bind and resolve until it gets a listener itself.
-- It accepts non-observable values too. This makes it possible to pass all state to a shared computed function (no need to waste more memory on those extra closures)
-- If the value returned by the compute function is an observable, it will bind to this and emit the resolve values. Crazy nested computes FTW!
-- These extra features do take up a bit of extra memory so I use an internal prototype (not visible to api) to reduce the footprint below that of observable and observ/computed
+...
 
-### mutant/watch
 
-- This is a generic sink. Almost the same as listening to a value using `value(function (v) { })` except that it emits the initial value too.
-- It also accepts non-observable objects and will just emit their value once and then never all again. Kind of like Promise.resolve(). (I think, never used promises)
+### Set
 
-### mutant/struct
+...
+
+
+### Struct
 
 Mostly the same as [observ-struct](https://github.com/raynos/observ-struct) except that it always emits the same object (with the properties changed). This means it violates immutability, but the trade-off is less garbage collection. The rest of the mutant helpers can handle this case pretty well.
 
@@ -137,24 +137,208 @@ var struct = MutantStruct({
 
 You can use these as your primary state atoms. I often use them like classes, extending them with additional methods to help with a given role. Another nice side effect is they work great for serializing/deserializing state. You can call them with `JSON.stringify(struct())` to get their entire tree state, then call them again later with `struct.set(JSON.parse(data))` to put it back. This is how state and file persistence works in [Loop Drop](https://github.com/mmckegg/loop-drop-app).
 
-### mutant/array
 
-Like [observ-array](https://github.com/raynos/observ-array) but as with struct, emits the same object. No constant shallow cloning on every change. You can push observables (or ordinary values) and it will emit whenever any of them change. Works well with mutant/map.
+### Value
 
-There's also `mutant/set` which is similar but only allows values to exist once.
+This is almost the same as [observable](https://github.com/dominictarr/observable) and [observ](https://github.com/raynos/observ). There's only a couple of small differences: you can specify a default value (fallback when null) and it will throw if you try and add a non-function as a listener (this one always got me)
 
-### mutant/map
+
+### MappedArray
+
+...
+
+
+###	MappedDict
+
+...
+
+
+---
+
+## ProxyType
+
+A more advanced feature - allow you to create observable slots which allow you to hot-swap observables in/ out of.
+
+- ProxyCollection
+- ProxyDictionary
+- Proxy
+
+
+### ProxyCollection
+
+...
+
+### ProxyDictionary
+
+...
+
+### Proxy
+
+...
+
+
+---
+
+## Transforms
+
+Take one or more observables and transform them into an observable
+
+- computed
+- concat
+- dictToCollection
+- idleProxy
+- keys
+- lookup
+- map
+- merge
+- throttle
+- when
+
+### computed
+
+Once again, similar to the observ and observable implementations. It has a few key differences though.
+
+- It will try to avoid computing if its inputs have not changed.
+- It also won't emit a change if the new computed value is the same as the old one. This helps to prevent additional work duplication and render noise downstream.
+- There is an optional "nextTick" mode that queues up change events until nextTick before computing. But if you call it (`value()`) in the current tick, it will compute immediately.
+- It acts like a pull through stream: if it doesn't have a sink, no code is run. It won't bind and resolve until it gets a listener itself.
+- It accepts non-observable values too. This makes it possible to pass all state to a shared computed function (no need to waste more memory on those extra closures)
+- If the value returned by the compute function is an observable, it will bind to this and emit the resolve values. Crazy nested computes FTW!
+- These extra features do take up a bit of extra memory so I use an internal prototype (not visible to api) to reduce the footprint below that of observable and observ/computed
+
+### concat
+
+...
+
+
+### dictToCollection
+
+...
+
+
+### idleProxy
+
+...
+
+
+### keys
+
+...
+
+
+### lookup
+
+...
+
+
+### map
 
 A `through` transform. It won't do any work and won't listen to its parents unless it has a listener. Calls your function with the original observable object (not the resolve value). You can then return an additional observable value as its result. It has methods on it that make it behave like an array.
 
 One of the most interesting features is its `maxTime` option. This is a ms value that specifies the max time to spend in a tight loop before emit the changes so far. This makes rendering large datasets to DOM elements much more responsive - a lot more like how the browser does it when it parses html. Things load in little chunks down the page. This for me has made it much easier to build apps that feel responsive and leave the main thread available for more important things (like playing sound).
 
-### and others
 
-Then there's a bunch of other helper modules that transform the data in different ways and allow proxying observables. There's a lookup helper that converts collections into dicts.
+### merge
 
-But yeah, not really much too it. Just my own personal collection of tools for building interfaces, binding and persisting data (oh and that don't cause audio glitches - which as a side effect means super responsive and smooth scrolling with no "jank")
+...
+
+
+### throttle
+
+...
+
+
+### when
+
+...
+
+
+---
+
+## Sinks
+
+Stuff that are exit hatches / sinks / make changes in the real world.
+
+- HtmlElement
+- watchAll
+- watchThrottle
+- watch
+
+
+### HtmlElement / h
+
+A fancy wrapper around `document.createElement()` that allows you to create DOM elements (entire trees if needed) without setting lots of properties or writing html. It just returns plain old DOM elements that can be added directly to the DOM.
+
+This is basically just [hyperscript](https://github.com/dominictarr/hyperscript) with a bunch of small tweaks that make it a lot more memory friendly. I've also enhanced the binding ability.
+
+In hyperscript you can add [observables](https://github.com/dominictarr/observable) as properties and when the observable value changes, the DOM magically updates. You can also return a DOM element. But in mutant, I've gone an extra step further and allow observables to return **multiple DOM elements**. I've also made "cleanup" (unbinding from events to free memory) automatic. It's a lot like pull streams: the DOM acts as a sink. **If an element created by mutant is not in the DOM, it doesn't listen to its observable properties.** It only resolves them once it is added, and if it is removed unlistens again.
+
+
+### watchAll
+
+... 
+
+
+### watchThrottle
+
+...
+
+
+### watch
+
+- This is a generic sink. Almost the same as listening to a value using `value(function (v) { })` except that it emits the initial value too.
+- It also accepts non-observable objects and will just emit their value once and then never all again. Kind of like Promise.resolve(). (I think, never used promises)
+
+
+---
+
+## Helpers
+
+A grab bag of useful things for dealing with mutant stuff.
+A lot of these are used internally, but are useful more generally
+
+- forEachPair
+- forEach
+- isObservable
+- onceIdle
+- resolve
+- send
+
+
+### forEachPair
+
+...
+
+
+### forEach
+
+...
+
+
+### isObservable
+
+...
+
+
+### onceIdle
+
+...
+
+
+### resolve
+
+...
+
+
+### send
+
+...
+
+
+
+---
 
 ## License
 
 MIT
+

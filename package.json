@@ -6,6 +6,7 @@
     "test": "browserify test/*.js | tape-run | tap-spec"
   },
   "author": "Matt McKegg",
+  "main": "./index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mmckegg/mutant.git"
