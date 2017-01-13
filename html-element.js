@@ -125,12 +125,8 @@ function handleChange (change) {
     }
   }
   for (var i = 0; i < change.removedNodes.length; i++) {
-    // if has already been unbound, safe to assume children have also
     var node = change.removedNodes[i]
-    var data = caches.get(node)
-    if (data && data.bound) {
-      walk(node, unbind)
-    }
+    walk(node, unbind)
   }
 }
 
