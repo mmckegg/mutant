@@ -16,7 +16,7 @@ Expect breaking changes.
 ## Install
 
 ```bash
-npm install @mmckegg/mutant --save
+npm install mutant --save
 ```
 
 ## Compatibility
@@ -32,11 +32,11 @@ Requires an environment that supports:
 ## Example
 
 ```js
-var h = require('@mmckegg/mutant/html-element')
-var Struct = require('@mmckegg/mutant/struct')
-var send = require('@mmckegg/mutant/send')
-var computed = require('@mmckegg/mutant/computed')
-var when = require('@mmckegg/mutant/when')
+var h = require('mutant/html-element')
+var Struct = require('mutant/struct')
+var send = require('mutant/send')
+var computed = require('mutant/computed')
+var when = require('mutant/when')
 
 var state = Struct({
   text: 'Test',
@@ -102,7 +102,7 @@ Observables that store data
 - MappedArray
 - MappedDict
 
-### Array 
+### Array
 
 Like [observ-array](https://github.com/raynos/observ-array) but as with struct, emits the same object. No constant shallow cloning on every change. You can push observables (or ordinary values) and it will emit whenever any of them change. Works well with mutant/map.
 
@@ -276,7 +276,7 @@ In hyperscript you can add [observables](https://github.com/dominictarr/observab
 
 ### watchAll
 
-... 
+...
 
 
 ### watchThrottle
@@ -341,4 +341,3 @@ A lot of these are used internally, but are useful more generally
 ## License
 
 MIT
-
