@@ -18,7 +18,7 @@ module.exports.forDocument = function (document, namespace) {
 }
 
 function Element (document, namespace, tagName, properties, children) {
-  if (!children && (Array.isArray(properties) || isText(properties))) {
+  if (!children && (Array.isArray(properties) || isText(properties) || isNode(properties))) {
     children = properties
     properties = null
   }
@@ -168,6 +168,10 @@ function replace (oldNodes, newNodes) {
 
 function isText (value) {
   return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+}
+
+function isNode (value) {
+  return value instanceof Node
 }
 
 function getNode (document, nodeOrText) {
