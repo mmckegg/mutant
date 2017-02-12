@@ -50,6 +50,7 @@ function Element (document, namespace, tagName, properties, children) {
     appendChild(document, node, data, children)
   }
 
+  maybeBind(document, node)
   return node
 }
 
@@ -66,7 +67,7 @@ function appendChild (document, target, data, node) {
   } else {
     node = getNode(document, node)
     target.appendChild(node)
-    if (getRootNode(target) === document) {
+    if (getRootNode(node) === document) {
       walk(node, rebind)
     }
   }
@@ -74,11 +75,13 @@ function appendChild (document, target, data, node) {
 
 function append (child) {
   this.target.appendChild(child)
-  maybeBind(child, this)
+  if (getRootNode(child) === this.document) {
+    walk(child, rebind)
+  }
 }
 
-function maybeBind (node, opts) {
-  bindQueue.push([node, opts])
+function maybeBind (document, node) {
+  bindQueue.push([document, node])
   if (!currentlyBinding) {
     currentlyBinding = true
     setImmediate(flushBindQueue)
@@ -89,9 +92,9 @@ function flushBindQueue () {
   currentlyBinding = false
   while (bindQueue.length) {
     var item = bindQueue.shift()
-    var node = item[0]
-    var opts = item[1]
-    if (getRootNode(opts.target) === opts.document) {
+    var document = item[0]
+    var node = item[1]
+    if (getRootNode(node) === document) {
       walk(node, rebind)
     }
   }
