@@ -18,7 +18,7 @@ module.exports.forDocument = function (document, namespace) {
 }
 
 function Element (document, namespace, tagName, properties, children) {
-  if (!children && (Array.isArray(properties) || isText(properties) || isNode(properties))) {
+  if (!children && (Array.isArray(properties) || isText(properties) || isNode(properties) || isObservable(properties))) {
     children = properties
     properties = null
   }
