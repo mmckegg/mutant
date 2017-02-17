@@ -17,7 +17,7 @@ function DictToCollection (obs) {
 
     for (var i = 0; i < length; i++) {
       var key = keys[i]
-      var item = obs.get(key)
+      var item = getValue(obs, key)
       if (shouldUpdate(item, raw[i])) {
         if (raw[i].key() !== key) {
           raw[i].key.set(key)
@@ -66,5 +66,16 @@ function getKeys (value) {
     return resolve(value.keys)
   } else {
     return Object.keys(resolve(value))
+  }
+}
+
+function getValue (obj, key) {
+  if (isObservable(obj) && obj.get) {
+    return obj.get(key)
+  } else {
+    var resolved = resolve(obj)
+    if (resolved) {
+      return resolved[key]
+    }
   }
 }
