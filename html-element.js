@@ -174,7 +174,8 @@ function isText (value) {
 }
 
 function isNode (value) {
-  return value instanceof Node
+  // for some reason, img elements are not instances of Node
+  return value instanceof global.Node || (global.HTMLElement && value instanceof global.HTMLElement)
 }
 
 function getNode (document, nodeOrText) {
