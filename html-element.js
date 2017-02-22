@@ -7,7 +7,7 @@ var caches = new global.WeakMap()
 var bindQueue = []
 var currentlyBinding = false
 var watcher = null
-var invalidateNextTick = require('./lib/invalidate-next-tick')
+var releaseNextTick = require('./lib/release-next-tick')
 
 module.exports = function (tag, attributes, children) {
   return Element(global.document, null, tag, attributes, children)
@@ -248,7 +248,7 @@ function Binding (document, obs, data) {
   this.obs = obs
   this.data = data
   this.bound = false
-  this.invalidated = false
+
   this.update = function (value) {
     var oldNodes = data.targets.get(obs)
     var newNodes = getNodes(document, value)
@@ -257,25 +257,25 @@ function Binding (document, obs, data) {
       data.targets.set(obs, newNodes)
     }
   }
-  invalidateNextTick(this)
+
+  // listen immediately, but if not bound before next tick, release
+  this.release = obs(this.update)
+  releaseNextTick(this)
 }
 
 Binding.prototype = {
   bind: function () {
     if (!this.bound) {
-      this._release = this.invalidated
-        ? watch(this.obs, this.update)
-        : this.obs(this.update)
-      this.invalidated = false
+      if (!this.release) {
+        this.release = watch(this.obs, this.update)
+      }
       this.bound = true
     }
   },
   unbind: function () {
-    if (this.bound && typeof this._release === 'function') {
-      this._release()
-      this._release = null
+    if (this.bound) {
       this.bound = false
-      invalidateNextTick(this)
+      releaseNextTick(this)
     }
   }
 }
