@@ -9,6 +9,8 @@ module.exports = Map
 function Map (obs, lambda, opts) {
   // opts: comparer, maxTime, onRemove
 
+  if (typeof lambda !== 'function') throw new Error('mutant/map lambda must be a function')
+
   var comparer = opts && opts.comparer || null
   var releases = []
   var binder = LazyWatcher(update, listen, unlisten)
