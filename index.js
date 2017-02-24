@@ -25,6 +25,8 @@ module.exports = {
 // Sinks
   'h': require('./html-element'),
   'HtmlElement': require('./html-element'),
+  'svg': require('./svg-element'),
+  'SvgElement': require('./svg-element'),
   'watchAll': require('./watch-all'),
   'watch': require('./watch'),
   'watchThrottle': require('./watch-throttle'),
