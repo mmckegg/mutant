@@ -1,13 +1,14 @@
 var Value = require('./value')
 var LazyWatcher = require('./lib/lazy-watcher')
 var isSame = require('./lib/is-same')
+var extend = require('xtend')
 
 module.exports = Struct
 
 var blackList = {
   'length': 'Clashes with `Function.prototype.length`.\n',
   'name': 'Clashes with `Function.prototype.name`\n',
-  'destroy': '`destroy` is a reserved key of struct\n'
+  'set': '`set` is a reserved key of struct\n'
 }
 
 function Struct (properties, opts) {
@@ -44,10 +45,15 @@ function Struct (properties, opts) {
     observable[key] = obs
   })
 
-  observable.set = function (values) {
+  observable.set = function (values, opts) {
     var lastValue = suspendBroadcast
+
     suspendBroadcast = true
     values = values || {}
+
+    if (opts && opts.merge) {
+      values = extend(object, values)
+    }
 
     // update inner observables
     keys.forEach(function (key) {
