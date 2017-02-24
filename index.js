@@ -35,6 +35,7 @@ module.exports = {
   'forEachPair': require('./for-each-pair'),
   'isObservable': require('./is-observable'),
   'onceIdle': require('./once-idle'),
+  'onceTrue': require('./once-true'),
   'resolve': require('./resolve'),
   'send': require('./send')
 }
