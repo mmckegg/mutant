@@ -29,6 +29,7 @@
   ],
   "dependencies": {
     "browser-split": "0.0.1",
+    "request-idle-callback": "^1.0.2",
     "xtend": "^4.0.1"
   },
   "devDependencies": {
