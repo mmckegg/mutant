@@ -34,7 +34,7 @@ function MutantMappedArray (defaultItems, lambda, opts) {
 
   obs.move = function (mappedItem, targetIndex) {
     var currentIndex = obs.indexOf(mappedItem)
-    if (~currentIndex) {
+    if (~currentIndex && currentIndex !== targetIndex) {
       var item = list.get(currentIndex)
       if (currentIndex < targetIndex) {
         list.transaction(function () {
@@ -46,6 +46,10 @@ function MutantMappedArray (defaultItems, lambda, opts) {
           list.insert(item, targetIndex)
           list.deleteAt(currentIndex + 1)
         })
+      }
+
+      if (typeof opts.onMove === 'function') {
+        opts.onMove(mappedItem, currentIndex, targetIndex)
       }
     }
   }
