@@ -16,7 +16,7 @@ computed.NO_CHANGE = {}
 computed.extended = extendedComputed
 
 function computed (observables, lambda, opts) {
-  // opts: nextTick, comparer, context
+  // opts: nextTick, comparer, context, passthru
   var instance = new ProtoComputed(observables, lambda, opts)
   return instance.MutantComputed.bind(instance)
 }
@@ -40,6 +40,10 @@ function ProtoComputed (observables, lambda, opts) {
   this.lambda = lambda
   this.opts = opts
   this.comparer = opts && opts.comparer || null
+
+  // when true, don't expand nested observables, just treat as values
+  this.passthru = opts && opts.passthru || null
+
   this.context = opts && opts.context || {}
   this.boundOnUpdate = this.onUpdate.bind(this)
   this.boundUpdateNow = this.updateNow.bind(this)
@@ -136,7 +140,7 @@ ProtoComputed.prototype = {
 
         this.computedValue = newComputedValue
 
-        if (isObservable(newComputedValue)) {
+        if (isObservable(newComputedValue) && !this.passthru) {
           // handle returning observable from computed
           this.outputValue = newComputedValue()
           this.inner = newComputedValue
