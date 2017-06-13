@@ -185,12 +185,15 @@ ProtoComputed.prototype = {
     }
   },
   getValue: function () {
+    var wasLazy = this.live && this.lazy
     if (!this.live || this.lazy || this.updating) {
       this.lazy = false
       if (this.opts && this.opts.nextTick && this.live && this.lazy) {
         this.onUpdate() // use cached value to make more responsive
       } else {
-        this.update()
+        if (this.update() && wasLazy) {
+          this.broadcast()
+        }
       }
       if (this.inner) {
         this.outputValue = resolve(this.inner)
