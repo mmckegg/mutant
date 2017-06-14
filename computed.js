@@ -33,7 +33,6 @@ function ProtoComputed (observables, lambda, opts) {
   this.inner = null
   this.updating = false
   this.live = false
-  this.lazy = false
   this.initialized = false
   this.listeners = []
   this.observables = observables
@@ -47,6 +46,7 @@ function ProtoComputed (observables, lambda, opts) {
   this.context = opts && opts.context || {}
   this.boundOnUpdate = this.onUpdate.bind(this)
   this.boundUpdateNow = this.updateNow.bind(this)
+  this.boundUnlisten = this.unlisten.bind(this)
 }
 
 ProtoComputed.prototype = {
@@ -86,7 +86,7 @@ ProtoComputed.prototype = {
         this.releaseInner = this.inner(this.onInnerUpdate.bind(this, this.inner))
       }
       this.live = true
-      this.lazy = true
+      this.update()
 
       if (this.opts && this.opts.onListen) {
         var release = this.opts.onListen()
@@ -97,7 +97,7 @@ ProtoComputed.prototype = {
     }
   },
   unlisten: function () {
-    if (this.live) {
+    if (this.live && !this.listeners.length) {
       this.live = false
 
       if (this.releaseInner) {
@@ -185,19 +185,11 @@ ProtoComputed.prototype = {
     }
   },
   getValue: function () {
-    var wasLazy = this.live && this.lazy
-    if (!this.live || this.lazy || this.updating) {
-      this.lazy = false
-      if (this.opts && this.opts.nextTick && this.live && this.lazy) {
-        this.onUpdate() // use cached value to make more responsive
-      } else {
-        if (this.update() && wasLazy) {
-          this.broadcast()
-        }
-      }
-      if (this.inner) {
-        this.outputValue = resolve(this.inner)
-      }
+    if (!this.updating && !this.live) {
+      // temporarily become live to watch for changes until next cycle to stop
+      // potential double refresh and handle weird race conditions
+      this.listen() // triggers update
+      setImmediate(this.boundUnlisten) // only runs if no listeners have been added
     }
     return this.outputValue
   },
@@ -212,18 +204,16 @@ ProtoComputed.prototype = {
 
 function extendedComputed (observables, update) {
   var live = false
-  var lazy = false
 
   var instance = computed(observables, function () {
     return update()
   }, {
-    onListen: function () { live = lazy = true },
+    onListen: function () { live = true },
     onUnlisten: function () { live = false }
   })
 
   instance.checkUpdated = function () {
-    if (!live || lazy) {
-      lazy = false
+    if (!live) {
       update()
     }
   }
