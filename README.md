@@ -123,6 +123,8 @@ There's also `mutant/set` which is similar but only allows values to exist once.
 
 ### Struct
 
+Take a fixed set of observables (or values) and return a single observable of the observed values, which updates whenever the inner values update. Subobservables can by any observable type.
+
 Mostly the same as [observ-struct](https://github.com/raynos/observ-struct) except that it always emits the same object (with the properties changed). This means it violates immutability, but the trade-off is less garbage collection. The rest of the mutant helpers can handle this case pretty well.
 
 They accept a set list of keys that specify types. For example:
