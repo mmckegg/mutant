@@ -61,10 +61,6 @@ function Dict (defaultValues, opts) {
     binder.broadcast()
   }
 
-  observable.includes = function (valueOrObs) {
-    return !!~object.indexOf(valueOrObs)
-  }
-
   observable.set = function (values) {
     if (fixedIndexing) {
       var keys = []
