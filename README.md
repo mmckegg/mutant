@@ -96,30 +96,80 @@ document.body.appendChild(element)
 
 Observables that store data
 
-- Array
-- Dict
-- Set
-- Struct
-- Value
+- [Array](#Array)
+- [Dict](#Dict)
+- [Set](#Set)
+- [Struct](#Struct)
+- [Value](#Struct)
 - MappedArray
 - MappedDict
 
+### Value
+
+The classic observable - stores a single value, updates listeners when the values changes.
+
+``` js
+var Value = require('mutant/value')
+
+var v = Value()
+v.set(true)
+//set listener
+v(function (_v) { ... })
+```
+
+This is almost the same as [observable](https://github.com/dominictarr/observable) and [observ](https://github.com/raynos/observ). There's only a couple of small differences: you can specify a default value (fallback when null) and it will throw if you try and add a non-function as a listener (this one always got me)
+
+
 ### Array
+
+An observable with additional _array like_ methods, which update the observable. The array items can be ordinary
+values or observables. 
 
 Like [observ-array](https://github.com/raynos/observ-array) but as with struct, emits the same object. No constant shallow cloning on every change. You can push observables (or ordinary values) and it will emit whenever any of them change. Works well with mutant/map.
 
 There's also `mutant/set` which is similar but only allows values to exist once.
 
+additional methods:
+* `array.put(index, value)` set item at `index` to `value`
+* `array.push(value)` append `value` to end of `array`.
+* `array.pop()` remove item from end.
+* `array.shift()` remove item from start.
+* `array.clear()` remove all items.
+* `array.insert(value, index)` equivalent to `[].splice(index, 0, value)` on a standard js array.
+* `array.delete(value)` remove the first occurance of `value` from the array.
+* `array.deleteAt(index)` remove item at `index`.
+* `array.transaction(fn)` apply a series of changes to the array and then update listeners in one go.
 
 ### Dict
 
-...
+The complement to [Struct](#Struct) - but instead of representing a fixed set of sub-observables, it's a single observable which you can add sub-keys to.
 
+``` js
+var Dict = require('mutant/dict')
+var d = Dict()
+d.put('key', 1)
+d(function (v) {
+  // => {key: 1}
+})
+
+```
+
+additional methods:
+* `dict.put(key, value)` set property `key` to `value`
+* `dict.delete(key)` remove property `key`
+* `dict.has(key)` returns true if `key` is present.
+* `dict.keys()` return array of keys.
 
 ### Set
 
-...
+Represents a collection like [Array](#Array) except without ordering.
 
+additional methods:
+* `set.add(value)` add `value` to the set.
+* `set.clear()` remove all items.
+* `set.has()` check if item is in the set.
+* `set.get(index)` get the item at `index` in the underlying array
+* `set.getLength()` get the number of items in the set.
 
 ### Struct
 
@@ -138,11 +188,6 @@ var struct = MutantStruct({
 ```
 
 You can use these as your primary state atoms. I often use them like classes, extending them with additional methods to help with a given role. Another nice side effect is they work great for serializing/deserializing state. You can call them with `JSON.stringify(struct())` to get their entire tree state, then call them again later with `struct.set(JSON.parse(data))` to put it back. This is how state and file persistence works in [Loop Drop](https://github.com/mmckegg/loop-drop-app).
-
-
-### Value
-
-This is almost the same as [observable](https://github.com/dominictarr/observable) and [observ](https://github.com/raynos/observ). There's only a couple of small differences: you can specify a default value (fallback when null) and it will throw if you try and add a non-function as a listener (this one always got me)
 
 
 ### MappedArray
@@ -185,18 +230,28 @@ A more advanced feature - allow you to create observable slots which allow you t
 
 Take one or more observables and transform them into an observable
 
-- computed
+- [Computed](#Computed)
 - concat
 - dictToCollection
 - idleProxy
 - keys
 - lookup
-- map
+- [Map](#Map)
 - merge
 - throttle
 - when
 
 ### computed
+
+Take an array of observables, and map them through a function that to produce a custom observable.
+
+``` js
+//observable that is true if A or B are true
+
+var Computed = require('mutant/computed')
+
+var aOrB = Computed([a, b], function (a, b) { return a || b })
+```
 
 Once again, similar to the observ and observable implementations. It has a few key differences though.
 
@@ -207,6 +262,15 @@ Once again, similar to the observ and observable implementations. It has a few k
 - It accepts non-observable values too. This makes it possible to pass all state to a shared computed function (no need to waste more memory on those extra closures)
 - If the value returned by the compute function is an observable, it will bind to this and emit the resolve values. Crazy nested computes FTW!
 - These extra features do take up a bit of extra memory so I use an internal prototype (not visible to api) to reduce the footprint below that of observable and observ/computed
+
+### map
+
+Apply a function to the value in another observable and update whenever that observable updates. Like computed, but for only one input.
+
+A `through` transform. It won't do any work and won't listen to its parents unless it has a listener. Calls your function with the original observable object (not the resolve value). You can then return an additional observable value as its result. It has methods on it that make it behave like an array.
+
+One of the most interesting features is its `maxTime` option. This is a ms value that specifies the max time to spend in a tight loop before emit the changes so far. This makes rendering large datasets to DOM elements much more responsive - a lot more like how the browser does it when it parses html. Things load in little chunks down the page. This for me has made it much easier to build apps that feel responsive and leave the main thread available for more important things (like playing sound).
+
 
 ### concat
 
@@ -232,12 +296,6 @@ Once again, similar to the observ and observable implementations. It has a few k
 
 ...
 
-
-### map
-
-A `through` transform. It won't do any work and won't listen to its parents unless it has a listener. Calls your function with the original observable object (not the resolve value). You can then return an additional observable value as its result. It has methods on it that make it behave like an array.
-
-One of the most interesting features is its `maxTime` option. This is a ms value that specifies the max time to spend in a tight loop before emit the changes so far. This makes rendering large datasets to DOM elements much more responsive - a lot more like how the browser does it when it parses html. Things load in little chunks down the page. This for me has made it much easier to build apps that feel responsive and leave the main thread available for more important things (like playing sound).
 
 
 ### merge
