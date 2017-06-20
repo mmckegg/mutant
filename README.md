@@ -238,13 +238,13 @@ A more advanced feature - allow you to create observable slots which allow you t
 
 Take one or more observables and transform them into an observable
 
-- [Computed](#Computed)
+- [computed](#computed)
 - concat
 - dictToCollection
 - idleProxy
 - keys
 - lookup
-- [Map](#Map)
+- [map](#map)
 - merge
 - throttle
 - when
@@ -256,9 +256,11 @@ Take an array of observables, and map them through a function that to produce a 
 ``` js
 //observable that is true if A or B are true
 
-var Computed = require('mutant/computed')
+var computed = require('mutant/computed')
 
-var aOrB = Computed([a, b], function (a, b) { return a || b })
+var aOrB = computed([a, b], (a, b) => { 
+  return a || b 
+})
 ```
 
 Once again, similar to the observ and observable implementations. It has a few key differences though.
