@@ -111,10 +111,12 @@ The classic observable - stores a single value, updates listeners when the value
 ``` js
 var Value = require('mutant/value')
 
-var v = Value()
-v.set(true)
+var obs = Value()
+obs.set(true)
 //set listener
-v(function (_v) { ... })
+obs(value => { 
+  // called with resolved value whenever the observable changes
+})
 ```
 
 This is almost the same as [observable](https://github.com/dominictarr/observable) and [observ](https://github.com/raynos/observ). There's only a couple of small differences: you can specify a default value (fallback when null) and it will throw if you try and add a non-function as a listener (this one always got me)
@@ -175,6 +177,8 @@ additional methods:
 
 Take a fixed set of observables (or values) and return a single observable of the observed values, which updates whenever the inner values update. Subobservables can by any observable type.
 
+They also have a `set` function which can be used to push a json object into the nested observables. Any additional set keys will be preserved if you resolve it.
+
 Mostly the same as [observ-struct](https://github.com/raynos/observ-struct) except that it always emits the same object (with the properties changed). This means it violates immutability, but the trade-off is less garbage collection. The rest of the mutant helpers can handle this case pretty well.
 
 They accept a set list of keys that specify types. For example:
@@ -189,7 +193,9 @@ var struct = MutantStruct({
 })
 ```
 
-You can use these as your primary state atoms. I often use them like classes, extending them with additional methods to help with a given role. Another nice side effect is they work great for serializing/deserializing state. You can call them with `JSON.stringify(struct())` to get their entire tree state, then call them again later with `struct.set(JSON.parse(data))` to put it back. This is how state and file persistence works in [Loop Drop](https://github.com/mmckegg/loop-drop-app).
+You can use these as your primary state atoms. I often use them like classes, extending them with additional methods to help with a given role. 
+
+Another nice side effect is they work great for serializing/deserializing state. You can call them with `JSON.stringify(struct())` to get their entire tree state, then call them again later with `struct.set(JSON.parse(data))` to put it back. This is how state and file persistence works in [Loop Drop](https://github.com/mmckegg/loop-drop-app).
 
 
 ### MappedArray
