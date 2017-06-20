@@ -61,6 +61,10 @@ function Dict (defaultValues, opts) {
     binder.broadcast()
   }
 
+  observable.transaction = function (cb) {
+    binder.transaction(observable, cb)
+  }
+
   observable.set = function (values) {
     if (fixedIndexing) {
       var keys = []

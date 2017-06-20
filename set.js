@@ -11,6 +11,7 @@ function Set (defaultValues, opts) {
   observable.has = instance.has.bind(instance)
   observable.set = instance.set.bind(instance)
   observable.get = instance.get.bind(instance)
+  observable.transaction = instance.transaction.bind(instance)
   observable.getLength = instance.getLength.bind(instance)
   return observable
 }
@@ -113,6 +114,10 @@ ProtoSet.prototype.getLength = function () {
 
 ProtoSet.prototype._bind = function (valueOrObs) {
   return typeof valueOrObs === 'function' ? valueOrObs(this.binder.onUpdate) : null
+}
+
+ProtoSet.prototype.transaction = function (fn) {
+  this.binder.transaction(this, fn)
 }
 
 ProtoSet.prototype._listen = function () {
