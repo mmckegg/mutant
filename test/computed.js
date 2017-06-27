@@ -45,3 +45,15 @@ test('computed lazy watch with `get` race condition', function(t) {
   t.deepEqual(resolve(final), 200)
   t.end()
 })
+
+test('computed inner update in non-live mode', function (t) {
+  var innerValue = Value(1)
+  var value = Value(innerValue)
+  var obs = computed(value, x => x)
+  t.deepEqual(obs(), 1)
+  setImmediate(() => {
+    innerValue.set(2)
+    t.deepEqual(obs(), 2)
+    t.end()
+  })
+})

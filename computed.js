@@ -85,8 +85,13 @@ ProtoComputed.prototype = {
       if (this.inner) {
         this.releaseInner = this.inner(this.onInnerUpdate.bind(this, this.inner))
       }
+
       this.live = true
-      this.update()
+
+      if (!this.update() && this.inner) {
+        // no change, but make sure that inner value is up to date
+        this.onInnerUpdate(this.inner, resolve(this.inner))
+      }
 
       if (this.opts && this.opts.onListen) {
         var release = this.opts.onListen()
