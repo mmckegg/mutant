@@ -123,7 +123,7 @@ function handleChange (change) {
   for (var i = 0; i < change.addedNodes.length; i++) {
     // if parent is a mutant element, then safe to assume it has already been bound
     var node = change.addedNodes[i]
-    if (!caches.has(node.parentNode)) {
+    if (!caches.has(node.parentNode) || !isBound(node)) {
       walk(node, rebind)
     }
   }
@@ -225,6 +225,19 @@ function unbind (node) {
       data.bindings.forEach(invokeUnbind)
     }
   }
+}
+
+function isBound (node) {
+  if (node.nodeType === 1) {
+    var data = caches.get(node)
+    if (data) {
+      return data.bindings.some(getBound)
+    }
+  }
+}
+
+function getBound (binding) {
+  return binding.bound
 }
 
 function invokeBind (binding) {
