@@ -392,7 +392,15 @@ A lot of these are used internally, but are useful more generally
 
 ### onceIdle
 
-...
+delay a function until the next [idle callback](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback)
+without hammering the `requestIdleCallback` api
+
+``` js
+var onceIdle = require('mutant/once-idle')
+onceIdle(function () {
+  //called once, at some later point (after rendering and such)
+})
+```
 
 
 ### resolve
