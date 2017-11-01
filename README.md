@@ -164,7 +164,7 @@ additional methods:
 
 ### Set
 
-Represents a collection like [Array](#Array) except without ordering.
+Represents a collection like [Array](#Array) except without ordering or duplicate values.
 
 additional methods:
 * `set.add(value)` add `value` to the set.
