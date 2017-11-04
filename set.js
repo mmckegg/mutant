@@ -27,6 +27,7 @@ function ProtoSet (defaultValues, opts) {
 
   if (opts && opts.nextTick) self.binder.nextTick = true
   if (opts && opts.idle) self.binder.idle = true
+  if (opts && opts.comparer) self.comparer = opts.comparer
 
   if (defaultValues && defaultValues.length) {
     defaultValues.forEach(function (valueOrObs) {
@@ -46,7 +47,7 @@ ProtoSet.prototype.MutantSet = function (listener) {
 }
 
 ProtoSet.prototype.add = function (valueOrObs) {
-  if (!~this.sources.indexOf(valueOrObs)) {
+  if (this.comparer ? this.sources.filter(x => this.comparer(x, valueOrObs)).length == 0 : !~this.sources.indexOf(valueOrObs)) {
     this.sources.push(valueOrObs)
     if (this.binder.live) {
       this.releases[this.sources.length - 1] = this._bind(valueOrObs)

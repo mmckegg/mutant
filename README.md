@@ -164,7 +164,7 @@ additional methods:
 
 ### Set
 
-Represents a collection like [Array](#Array) except without ordering or duplicate values.
+Represents a collection like [Array](#Array) except without ordering or duplicate values. It is possible to assign a comparer function in the opts, to be used for determining uniqueness.
 
 additional methods:
 * `set.add(value)` add `value` to the set.
