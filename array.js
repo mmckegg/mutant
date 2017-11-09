@@ -116,12 +116,13 @@ function Array (defaultValues, opts) {
   observable.set = function (values) {
     var changed = false
     if (fixedIndexing) {
-      var length = values && values.length || 0
+      var length = (values && values.length) || 0
       for (var i = 0; i < length; i++) {
         if (isObservable(values[i])) {
           if (values[i] !== sources[i]) {
-            tryInvoke(objectReleases[index])
+            tryInvoke(objectReleases[i])
             sources[i] = values[i]
+            object[i] = resolve(sources[i])
             changed = true
             if (binder.live) {
               objectReleases[i] = bind(sources[i])
@@ -130,11 +131,13 @@ function Array (defaultValues, opts) {
         } else if (sources[i] && sources[i]._type === 'MutantArrayValue') {
           if (!isSame(sources[i](), values[i], comparer)) {
             sources[i].set(values[i])
+            object[i] = resolve(sources[i])
             changed = true
           }
         } else {
-          tryInvoke(objectReleases[index])
+          tryInvoke(objectReleases[i])
           sources[i] = getObsValue(values[i])
+          object[i] = resolve(sources[i])
           changed = true
           if (binder.live) {
             objectReleases[i] = bind(sources[i])
