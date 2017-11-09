@@ -57,3 +57,28 @@ test('computed inner update in non-live mode', function (t) {
     t.end()
   })
 })
+
+test('computed nextTick, observe', function (t) {
+  var events = []
+  var value = Value(1)
+  var obs = computed(value, x => x * 100, {nextTick: true})
+  obs(value => events.push(value))
+  value.set(2)
+  t.deepEqual(events, [])
+  value.set(3)
+  t.deepEqual(events, [])
+
+  setImmediate(() => {
+    t.deepEqual(events, [300])
+    t.end()
+  })
+})
+
+test('computed nextTick, same tick `get` (short-circuit delay)', function (t) {
+  var value = Value(1)
+  var obs = computed(value, x => x * 100, {nextTick: true})
+  t.equal(resolve(obs), 100)
+  value.set(2)
+  t.equal(resolve(obs), 200)
+  t.end()
+})

@@ -195,6 +195,9 @@ ProtoComputed.prototype = {
       // potential double refresh and handle weird race conditions
       this.listen() // triggers update
       setImmediate(this.boundUnlisten) // only runs if no listeners have been added
+    } else if (this.updating) {
+      // short circuit nextTick if this value is read directly
+      this.updateNow()
     }
     return this.outputValue
   },
