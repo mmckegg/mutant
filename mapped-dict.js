@@ -28,7 +28,7 @@ function MutantMappedDict (defaultItems, lambda, opts) {
   }
 
   observable.delete = function (key) {
-    list.remove(key)
+    list.delete(key)
   }
 
   return observable
