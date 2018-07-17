@@ -247,7 +247,7 @@ Take one or more observables and transform them into an observable
 - [map](#map)
 - merge
 - throttle
-- when
+- [when](#when)
 
 ### computed
 
@@ -320,8 +320,20 @@ One of the most interesting features is its `maxTime` option. This is a ms value
 
 ### when
 
-...
+``` js
+var when = require('mutant/when')
 
+when(
+  obs,
+  A,      // if true
+  B       // if false (optional)
+)
+// => observable
+```
+
+Behaves like an observable ternary.
+
+Take an observable `obs` and return the second argument `A` if `obs` is truthy. An optional third argument `B` can be passed and will return if `obs` is falsey.
 
 ---
 
