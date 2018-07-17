@@ -96,11 +96,11 @@ document.body.appendChild(element)
 
 Observables that store data
 
-- [Array](#Array)
-- [Dict](#Dict)
-- [Set](#Set)
-- [Struct](#Struct)
-- [Value](#Struct)
+- [Array](#array)
+- [Dict](#dict)
+- [Set](#set)
+- [Struct](#struct)
+- [Value](#value)
 - MappedArray
 - MappedDict
 
@@ -132,15 +132,22 @@ Like [observ-array](https://github.com/raynos/observ-array) but as with struct, 
 There's also `mutant/set` which is similar but only allows values to exist once.
 
 additional methods:
+* `array.get(index)` get the value at `index`
+* `array.getLength()` get the length of the array
 * `array.put(index, value)` set item at `index` to `value`
 * `array.push(value)` append `value` to end of `array`.
 * `array.pop()` remove item from end.
 * `array.shift()` remove item from start.
-* `array.clear()` remove all items.
 * `array.insert(value, index)` equivalent to `[].splice(index, 0, value)` on a standard js array.
 * `array.delete(value)` remove the first occurance of `value` from the array.
 * `array.deleteAt(index)` remove item at `index`.
 * `array.transaction(fn)` apply a series of changes to the array and then update listeners in one go.
+* `array.includes(item)` check if the array includes `item` 
+* `array.indexOf(item)` find the index of `item` in the array
+* `array.find(fn)` return the first `item` array for which `fn(item) == true`
+* `array.forEach(fn)` link Array.proptypes.forEach
+* `array.set(array)` overwrite the contents of the mutant array with `array`
+* `array.clear()` remove all items.
 
 ### Dict
 
