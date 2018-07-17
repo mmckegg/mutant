@@ -145,7 +145,7 @@ additional methods:
 * `array.includes(item)` check if the array includes `item` 
 * `array.indexOf(item)` find the index of `item` in the array
 * `array.find(fn)` return the first `item` array for which `fn(item) == true`
-* `array.forEach(fn)` link Array.proptypes.forEach
+* `array.forEach(fn)` iterate over all raw items in the array
 * `array.set(array)` overwrite the contents of the mutant array with `array`
 * `array.clear()` remove all items.
 
