@@ -320,17 +320,20 @@ One of the most interesting features is its `maxTime` option. This is a ms value
 
 ### when
 
-Take an observable and return the second argument if the value of the observable is true after an update. An optional third argument can be passed and will return if the value of the observable is false after an update.
-
 ``` js
 var when = require('mutant/when')
 
 when(
   obs,
-  ifTrue,
-  ifFalse // optional
+  A,      // if true
+  B       // if false (optional)
 )
+// => observable
 ```
+
+Behaves like an observable ternary.
+
+Take an observable `obs` and return the second argument `A` if `obs` is truthy. An optional third argument `B` can be passed and will return if `obs` is falsey.
 
 ---
 
