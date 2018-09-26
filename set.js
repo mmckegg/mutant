@@ -22,7 +22,7 @@ function ProtoSet (defaultValues, opts) {
   self.object = []
   self.sources = []
   self.releases = []
-  self.binder = LazyWatcher.call(self, self._update, self._listen, self._unlisten)
+  self.binder = LazyWatcher(self._update, self._listen, self._unlisten, self)
   self.binder.value = this.object
 
   if (opts && opts.nextTick) self.binder.nextTick = true

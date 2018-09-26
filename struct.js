@@ -12,27 +12,22 @@ var blackList = {
 }
 
 function Struct (properties, opts) {
-  var object = Object.create({})
-  var releases = []
-  var binder = LazyWatcher(update, listen, unlisten)
-  binder.value = object
-
-  if (opts && opts.nextTick) binder.nextTick = true
-  if (opts && opts.idle) binder.idle = true
-
-  var comparer = opts && opts.comparer || null
-
-  var observable = function MutantStruct (listener) {
-    if (!listener) {
-      return binder.getValue()
-    }
-    return binder.addListener(listener)
+  var state = {
+    object: Object.create({}),
+    comparer: (opts && opts.comparer) || null,
+    suspendBroadcast: false,
+    releases: [],
+    keys: Object.keys(properties),
+    properties: properties
   }
 
-  var keys = Object.keys(properties)
-  var suspendBroadcast = false
+  if (opts && opts.nextTick) state.binder.nextTick = true
+  if (opts && opts.idle) state.binder.idle = true
 
-  keys.forEach(function (key) {
+  state.observable = MutantStruct.bind(state)
+  state.observable.set = set.bind(state)
+
+  state.keys.forEach(function (key) {
     if (blackList.hasOwnProperty(key)) {
       throw new Error("Cannot create a struct with a key named '" + key + "'.\n" + blackList[key])
     }
@@ -41,73 +36,83 @@ function Struct (properties, opts) {
       ? properties[key]
       : Value(properties[key])
 
-    object[key] = obs()
-    observable[key] = obs
+    state.object[key] = obs()
+    state.observable[key] = obs
   })
 
-  observable.set = function (values, opts) {
-    var lastValue = suspendBroadcast
+  state.binder = LazyWatcher(update, listen, unlisten, state)
+  state.binder.value = state.object
 
-    suspendBroadcast = true
-    values = values || {}
+  return state.observable
+}
 
-    if (opts && opts.merge) {
-      values = extend(object, values)
-    }
+function MutantStruct (listener) {
+  if (!listener) {
+    return this.binder.getValue()
+  }
+  return this.binder.addListener(listener)
+}
 
-    // update inner observables
-    keys.forEach(function (key) {
-      if (observable[key]() !== values[key]) {
-        observable[key].set(values[key])
-      }
-    })
+function set (values, opts) {
+  var lastValue = this.suspendBroadcast
 
-    // store additional keys (but don't create observables)
-    Object.keys(values).forEach(function (key) {
-      if (!(key in properties)) {
-        object[key] = values[key]
-      }
-    })
+  this.suspendBroadcast = true
+  values = values || {}
 
-    suspendBroadcast = lastValue
-    if (!suspendBroadcast) {
-      binder.broadcast()
-    }
+  if (opts && opts.merge) {
+    values = extend(this.object, values)
   }
 
-  return observable
+  // update inner observables
+  this.keys.forEach(function (key) {
+    if (this.observable[key]() !== values[key]) {
+      this.observable[key].set(values[key])
+    }
+  }, this)
 
-  // scoped
+  // store additional keys (but don't create observables)
+  Object.keys(values).forEach(function (key) {
+    if (!(key in this.properties)) {
+      this.object[key] = values[key]
+    }
+  }, this)
 
-  function listen () {
-    keys.map(function (key) {
-      var obs = observable[key]
-      releases.push(obs(function (val) {
-        if (!isSame(val, object[key], comparer)) {
-          object[key] = val
-          if (!suspendBroadcast) {
-            binder.broadcast(object)
-          }
-        }
-      }))
-    })
+  this.suspendBroadcast = lastValue
+  if (!this.suspendBroadcast) {
+    this.binder.broadcast()
   }
+}
 
-  function unlisten () {
-    while (releases.length) {
-      releases.pop()()
+function update () {
+  var changed = false
+  this.keys.forEach(function (key) {
+    var newValue = this.observable[key]()
+    if (!isSame(newValue, this.object[key], this.comparer)) {
+      this.object[key] = this.observable[key]()
+      changed = true
+    }
+  }, this)
+  return changed
+}
+
+function listen () {
+  this.keys.forEach(function (key) {
+    var obs = this.observable[key]
+    this.releases.push(obs(listener.bind(this, key)))
+  }, this)
+}
+
+function listener (key, val) {
+  if (!isSame(val, this.object[key], this.comparer)) {
+    this.object[key] = val
+    if (!this.suspendBroadcast) {
+      this.binder.broadcast(this.object)
     }
   }
+}
 
-  function update () {
-    var changed = false
-    keys.forEach(function (key) {
-      var newValue = observable[key]()
-      if (!isSame(newValue, object[key], comparer)) {
-        object[key] = observable[key]()
-        changed = true
-      }
-    })
-    return changed
+function unlisten () {
+  while (this.releases.length) {
+    this.releases.pop()()
   }
 }
