@@ -1,4 +1,6 @@
 require('setimmediate')
+require('source-map-support').install()
+
 var test = require('tape')
 
 var MutantArray = require('../array')

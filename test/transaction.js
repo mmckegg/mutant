@@ -1,4 +1,6 @@
 var test = require('tape')
+require('source-map-support').install()
+
 var MutantArray = require('../array')
 var MutantDict = require('../dict')
 var MutantSet = require('../set')

@@ -3,7 +3,7 @@
   "version": "3.22.1",
   "description": "Create observables and map them to DOM elements. Massively inspired by hyperscript and observ-*. No virtual dom, just direct observable bindings. Unnecessary garbage collection is avoided by using mutable objects instead of blasting immutable junk all over the place.",
   "scripts": {
-    "test": "browserify test/*.js | tape-run | tap-spec"
+    "test": "browserify -d test/*.js | tape-run | tap-spec"
   },
   "author": "Matt McKegg",
   "main": "./index.js",
@@ -29,6 +29,7 @@
   ],
   "dependencies": {
     "browser-split": "0.0.1",
+    "source-map-support": "^0.5.9",
     "xtend": "^4.0.1"
   },
   "devDependencies": {

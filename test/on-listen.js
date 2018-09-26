@@ -1,4 +1,5 @@
 var test = require('tape')
+require('source-map-support').install()
 
 // currently only these types support onListen/unlisten
 // in the future, all types should allow it!
