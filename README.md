@@ -29,6 +29,7 @@ Requires an environment that supports:
   - `element.classList`
   - `MutationObserver` (optional, only for root `html-element` binding support)
   - ES5 arrays (`Array.prototype.forEach`, etc)
+  - `IntersectionObserver` (optional, only when using `intersectionBindingViewport` attribute on elements)
   - `Array.prototype.includes`
 
 ## Example
@@ -356,11 +357,24 @@ Stuff that are exit hatches / sinks / make changes in the real world.
 
 ### HtmlElement / h
 
+```js
+var textAlign = Value('center')
+var someText = Value('some text')
+var element = h('div', {style: {'text-align': textAlign}}, [
+  h('p.text', someText),
+  h('p.text', [
+    'Text with ', h('strong', 'formatting'), ' and a ', h('a', {href: '/url'}, 'hyperlink')
+  ]),
+])
+```
+
 A fancy wrapper around `document.createElement()` that allows you to create DOM elements (entire trees if needed) without setting lots of properties or writing html. It just returns plain old DOM elements that can be added directly to the DOM.
 
-This is basically just [hyperscript](https://github.com/dominictarr/hyperscript) with a bunch of small tweaks that make it a lot more memory friendly. I've also enhanced the binding ability.
+This is basically just [hyperscript](https://github.com/dominictarr/hyperscript) with a bunch of small tweaks and enhanced binding ability.
 
-In hyperscript you can add [observables](https://github.com/dominictarr/observable) as properties and when the observable value changes, the DOM magically updates. You can also return a DOM element. But in mutant, I've gone an extra step further and allow observables to return **multiple DOM elements**. I've also made "cleanup" (unbinding from events to free memory) automatic. It's a lot like pull streams: the DOM acts as a sink. **If an element created by mutant is not in the DOM, it doesn't listen to its observable properties.** It only resolves them once it is added, and if it is removed unlistens again.
+You can add observables as properties and when the observable value changes, the DOM magically updates. You can also return **one or more DOM elements**. Cleanup is automatic (when removed from DOM using `MutationObserver`). It's a lot like pull streams: the DOM acts as a sink. **If an element created by mutant is not in the DOM, it doesn't listen to its observable properties.** It only resolves them once it is added, and if it is removed unlistens again.
+
+You can also specify an `intersectionBindingViewport` on scrolling elements if you would like the elements to only be bound (live) when they are in the viewport. You can specify `true` or `{rootMargin}`. See [Intersection Observer API - rootMargin](https://developer.mozilla.org/en-US/docs/Web/API/IntersectionObserver/rootMargin) for details.
 
 
 ### watchAll
