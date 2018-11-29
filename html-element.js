@@ -42,7 +42,8 @@ function Element (document, namespace, tagName, properties, children) {
   var data = {
     targets: new Map(),
     observing: false,
-    bindings: []
+    bindings: [],
+    hookBindings: []
   }
 
   if ('intersectionBindingViewport' in properties) {
@@ -284,6 +285,7 @@ function rebind (node) {
       } else {
         data.bindings.forEach(invokeBind)
       }
+      data.hookBindings.forEach(invokeBind)
     }
   }
 }
@@ -298,6 +300,7 @@ function unbind (node) {
         intersectionObserver.unobserve(node)
       }
       data.bindings.forEach(invokeUnbind)
+      data.hookBindings.forEach(invokeUnbind)
     }
   }
 }
@@ -306,7 +309,7 @@ function isBound (node) {
   if (node.nodeType === 1) {
     var data = caches.get(node)
     if (data) {
-      return data.observing || data.bindings.some(getBound)
+      return data.observing || data.bindings.some(getBound) || data.hookBindings.some(getBound)
     }
   }
 }
