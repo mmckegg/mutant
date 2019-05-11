@@ -41,7 +41,23 @@ function Element (document, namespace, tagName, properties, children) {
 
   var data = {
     targets: new Map(),
-    bindings: []
+    observing: false,
+    bindings: [],
+    hookBindings: []
+  }
+
+  if ('intersectionBindingViewport' in properties) {
+    var options = properties.intersectionBindingViewport
+    delete properties.intersectionBindingViewport
+
+    if (options && global.IntersectionObserver) {
+      node.__mutantIntersectionBindingViewport = true
+      data.intersectionObserver = new global.IntersectionObserver(onIntersection, {
+        root: node,
+        rootMargin: options.rootMargin || '0px',
+        threshold: [0, 0.1]
+      })
+    }
   }
 
   caches.set(node, data)
@@ -111,12 +127,61 @@ function onMutate (changes) {
   changes.forEach(handleChange)
 }
 
+function onIntersection (changes) {
+  changes.forEach(handleIntersect)
+}
+
+function handleIntersect (change) {
+  if (change.isIntersecting) {
+    if (change.intersectionRatio >= 0.1) {
+      enterViewport(change.target)
+    }
+  } else {
+    exitViewport(change.target)
+  }
+}
+
 function getRootNode (el) {
   var element = el
   while (element.parentNode) {
     element = element.parentNode
   }
   return element
+}
+
+function getIntersectionObserver (el) {
+  var element = el
+  while (element.parentNode) {
+    element = element.parentNode
+    if (element.__mutantIntersectionBindingViewport) {
+      var data = caches.get(element)
+      if (data) {
+        return data.intersectionObserver
+      }
+    }
+  }
+}
+
+function enterViewport (node) {
+  if (node.nodeType === 1) {
+    var data = caches.get(node)
+    if (data) {
+      if (data.observing) {
+        data.bindings.forEach(invokeBind)
+      }
+    }
+  }
+}
+
+function exitViewport (node) {
+  if (node.nodeType === 1) {
+    var data = caches.get(node)
+    if (data) {
+      if (data.observing) {
+        data.bindings.forEach(invokeUnbind)
+      }
+    }
+  }
 }
 
 function handleChange (change) {
@@ -213,7 +278,14 @@ function rebind (node) {
   if (node.nodeType === 1) {
     var data = caches.get(node)
     if (data) {
-      data.bindings.forEach(invokeBind)
+      var intersectionObserver = getIntersectionObserver(node)
+      if (!data.observing && intersectionObserver) {
+        data.observing = true
+        intersectionObserver.observe(node)
+      } else {
+        data.bindings.forEach(invokeBind)
+      }
+      data.hookBindings.forEach(invokeBind)
     }
   }
 }
@@ -222,7 +294,13 @@ function unbind (node) {
   if (node.nodeType === 1) {
     var data = caches.get(node)
     if (data) {
+      var intersectionObserver = getIntersectionObserver(node)
+      if (intersectionObserver && data.observing) {
+        data.observing = false
+        intersectionObserver.unobserve(node)
+      }
       data.bindings.forEach(invokeUnbind)
+      data.hookBindings.forEach(invokeUnbind)
     }
   }
 }
@@ -231,7 +309,7 @@ function isBound (node) {
   if (node.nodeType === 1) {
     var data = caches.get(node)
     if (data) {
-      return data.bindings.some(getBound)
+      return data.observing || data.bindings.some(getBound) || data.hookBindings.some(getBound)
     }
   }
 }
