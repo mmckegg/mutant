@@ -20,6 +20,7 @@ module.exports = {
   'lookup': require('./lookup'),
   'map': require('./map'),
   'merge': require('./merge'),
+  'reverse': require('./reverse'),
   'throttle': require('./throttle'),
   'when': require('./when'),
 // Sinks

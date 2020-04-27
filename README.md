@@ -254,6 +254,7 @@ Take one or more observables and transform them into an observable
 - lookup
 - [map](#map)
 - merge
+- [reverse](#reverse)
 - throttle
 - [when](#when)
 
@@ -318,8 +319,16 @@ One of the most interesting features is its `maxTime` option. This is a ms value
 
 ### merge
 
-...
+Merges
 
+### reverse
+
+```js
+var reverse = require('mutant/reverse')
+var reversed = reverse(collection)
+```
+
+Takes an input collection and reverses it. This preserves the raw observables (which is what makes it better than computed).
 
 ### throttle
 
