@@ -219,6 +219,8 @@ function Map (obs, lambda, opts) {
   function updateItem (i) {
     if (i < getLength(obs)) {
       var item = get(obs, i)
+
+      // insert new items, or replace if type is not comparable (e.g. non observable object)
       if (!lastValues.has(item) || !isSame(item, item, comparer)) {
         if (itemInvalidators.has(item)) {
           itemInvalidators.get(item).forEach(invokeRelease)

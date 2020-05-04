@@ -7,6 +7,7 @@ module.exports = {
   'Value': require('./value'),
   'MappedArray': require('./mapped-array'),
   'MappedDict': require('./mapped-dict'),
+  'TypedCollection': require('./typed-collection'),
 // ProxyTypes
   'ProxyCollection': require('./proxy-collection'),
   'ProxyDict': require('./proxy-dict'),

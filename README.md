@@ -104,6 +104,7 @@ Observables that store data
 - [Value](#value)
 - MappedArray
 - MappedDict
+- [TypedCollection](#typedcollection)
 
 ### Value
 
@@ -194,7 +195,7 @@ They accept a set list of keys that specify types. For example:
 ```js
 var struct = MutantStruct({
   description: Value(),
-  tags: Set(),
+  tags: MutantSet(),
   likes: Value(0, {defaultValue: 0}),
   props: MutantArray(),
   attrs: MutantDict()
@@ -215,6 +216,83 @@ Another nice side effect is they work great for serializing/deserializing state.
 
 ...
 
+### TypedCollection
+
+This is similar to `MappedArray`, except with key checking. You can specify a `matcher` option to define how to decide that two objects are the same (defaults to `(rawValue) => rawValue.id`), and now any time `set` is called, instances with the same matcher result will be updated instead of recreated even if the order has changed. This is really useful when turning a collection into DOM elements, and reordering can happen remotely and you are just syncing the entire state every time.
+ 
+```js
+var state = Struct({
+  models: TypedCollection(YourModel, {
+    matcher: (value) => value.id
+  })
+})
+
+function YourModel () {
+  return Struct({
+    id: Value(),
+    tags: MutantSet(),
+    options: Dict()
+  }) 
+}
+```
+
+The constructor is called with the rawValue of the object, however you don't need to use this to populate the object as it will also be called with `.set`. This is just to allow polymorphic typing checks:
+
+```js
+var types = {
+  Cat () {
+    return Struct({
+      id: Value(),
+      age: Value(),
+      ...props
+    }) 
+  },
+  Dog () {
+    return Struct({
+      id: Value(),
+      age: Value(),
+      ...props
+    }) 
+  }
+}
+
+var state = Struct({
+  pets: TypedCollection((value) => types[value.type](), {
+    matcher: (value) => value.id,
+    invalidator: (current, newValue) => current.type != newValue.type,
+    onAdd: (obj) => console.log('added', resolve(obj)),
+    onRemove: (obj) => console.log('removed', resolve(obj)),
+  })
+})
+
+state.set({
+  pets: [
+    {id: 1, age: 2, type: 'Dog'},
+    {id: 2, age: 9, type: 'Cat'}
+  ]
+})
+// => added {id: 1, type: 'Dog'}
+// => added {id: 2, type: 'Cat'}
+
+state.set({
+  pets: [
+    {id: 2, age: 9, type: 'Cat'},
+    {id: 1, age: 3, type: 'Dog'}
+  ]
+})
+// the inner models are updated and order changed, but no new cats/dogs are created
+
+state.set({
+  pets: [
+    // somehow our dog has turned into a cat!
+    // even though the cat has the same ID as the dog, the original object is discarded, and a new one constructed as invalidator returns true
+    {id: 1, age: 3, type: 'Cat'},
+    {id: 2, age: 9, type: 'Cat'}
+  ]
+})
+// => removed {id: 1, type: 'Dog'}
+// => added {id: 1, type: 'Cat'}
+```
 
 ---
 
