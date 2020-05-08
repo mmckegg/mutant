@@ -39,5 +39,6 @@ module.exports = {
   'onceIdle': require('./once-idle'),
   'onceTrue': require('./once-true'),
   'resolve': require('./resolve'),
+  'channel': require('./channel'),
   'send': require('./send')
 }

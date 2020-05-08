@@ -23,9 +23,9 @@ npm install mutant --save
 ## Compatibility
 
 Requires an environment that supports:
-  - `setImmediate(fn)`
+  - `setImmediate(fn)` (only available in node/electron by default so in browser need to use [`setImmediate`](https://github.com/yuzujs/setImmediate#readme) shim)
   - `requestIdleCallback(fn)` (optional, only when using `{idle: true}`, `mutant/once-idle` or `mutant/idle-proxy`)
-  - `Map` and `WeakMap`
+  - `Map`, `WeakMap`, and `WeakSet`
   - `element.classList`
   - `MutationObserver` (optional, only for root `html-element` binding support)
   - ES5 arrays (`Array.prototype.forEach`, etc)
@@ -487,13 +487,25 @@ You can also specify an `intersectionBindingViewport` on scrolling elements if y
 A grab bag of useful things for dealing with mutant stuff.
 A lot of these are used internally, but are useful more generally
 
+- channel
 - forEachPair
 - forEach
 - isObservable
 - onceIdle
 - resolve
-- send
+- send 
 
+### channel 
+
+Creates an observable like object for broadcasting events with no permanent state.
+
+```js
+  var channel = MutantChannel()
+  var unwatch = channel.listen((value) => {
+    console.log(value) // => value
+  })
+  channel.broadcast('value')
+```
 
 ### forEachPair
 
