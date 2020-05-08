@@ -11,6 +11,9 @@ var blackList = {
   'set': '`set` is a reserved key of struct\n'
 }
 
+const structs = new WeakSet()
+
+
 function Struct (properties, opts) {
   var object = Object.create({})
   var releases = []
@@ -75,6 +78,7 @@ function Struct (properties, opts) {
     }
   }
 
+  structs.add(observable)
   return observable
 
   // scoped
@@ -110,4 +114,8 @@ function Struct (properties, opts) {
     })
     return changed
   }
+}
+
+Struct.isStruct = function (obj) {
+  return structs.has(obj)
 }
