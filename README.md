@@ -437,6 +437,7 @@ Take an observable `obs` and return the second argument `A` if `obs` is truthy. 
 Stuff that are exit hatches / sinks / make changes in the real world.
 
 - HtmlElement
+- SvgElement
 - watchAll
 - watchThrottle
 - watch
@@ -463,6 +464,19 @@ You can add observables as properties and when the observable value changes, the
 
 You can also specify an `intersectionBindingViewport` on scrolling elements if you would like the elements to only be bound (live) when they are in the viewport. You can specify `true` or `{rootMargin}`. See [Intersection Observer API - rootMargin](https://developer.mozilla.org/en-US/docs/Web/API/IntersectionObserver/rootMargin) for details.
 
+
+### SvgElement / svg
+
+Very similar the same as `h` above, except works for svg elements. 
+
+```js
+const { svg } = require('mutant')
+let element = svg('svg', { width: 400, height: 300 }, [
+  svg('circle', { fill: 'lime', cx: 100, cy: 250, r: 20 }),
+  svg('rect', { fill: 'red', x: 50, y: 50, width: 300, height: 100 })
+])
+document.body.append(element)
+```
 
 ### watchAll
 
