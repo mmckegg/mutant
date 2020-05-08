@@ -6,6 +6,7 @@ module.exports = function throttledWatch (obs, minDelay, listener, opts) {
   var lastRefreshAt = 0
   var lastValueAt = 0
   var throttleTimer = null
+  var broadcasting = false
 
   var broadcastInitial = !opts || opts.broadcastInitial !== false
 
@@ -21,7 +22,14 @@ module.exports = function throttledWatch (obs, minDelay, listener, opts) {
     return obs(function (v) {
       if (!throttling) {
         if (Date.now() - lastRefreshAt > minDelay) {
-          refresh()
+          if (opts && opts.nextTick) {
+            if (!broadcasting) {
+              broadcasting = true
+              setImmediate(refresh)
+            }
+          } else {
+            refresh()
+          }
         } else {
           throttling = true
           throttleTimer = setInterval(refresh, minDelay)
@@ -34,6 +42,7 @@ module.exports = function throttledWatch (obs, minDelay, listener, opts) {
   }
 
   function refresh () {
+    broadcasting = false
     lastRefreshAt = Date.now()
     listener(obs())
     if (throttling && lastRefreshAt - lastValueAt > minDelay) {
