@@ -35,7 +35,7 @@
     "browserify": "^13.1.1",
     "setimmediate": "^1.0.5",
     "source-map-support": "^0.5.9",
-    "tap-spec": "^4.1.1",
+    "tap-spec": "^5.0.0",
     "tape": "^4.6.3",
     "tape-run": "^2.1.4"
   }
