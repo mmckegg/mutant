@@ -467,7 +467,7 @@ You can also specify an `intersectionBindingViewport` on scrolling elements if y
 
 ### SvgElement / svg
 
-Very similar the same as `h` above, except works for svg elements. 
+Very similar to `h` above, except works for svg elements. 
 
 ```js
 const { svg } = require('mutant')
