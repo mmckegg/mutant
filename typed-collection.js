@@ -1,4 +1,5 @@
 var LazyWatcher = require('./lib/lazy-watcher')
+var Channel = require('./channel')
 var isSame = require('./lib/is-same')
 var resolve = require('./resolve')
 var addCollectionMethods = require('./lib/add-collection-methods')
@@ -22,6 +23,10 @@ function TypedCollection (ctor, opts) {
   var object = []
   var releases = []
 
+  var addEvent = Channel()
+  var removeEvent = Channel()
+  var moveEvent = Channel()
+
   var binder = LazyWatcher(update, listen, unlisten)
   binder.value = object
 
@@ -38,6 +43,15 @@ function TypedCollection (ctor, opts) {
   // getLength, get, indexOf, etc
   addCollectionMethods(observable, sources)
 
+  observable.onAdd = addEvent.listen
+  observable.onRemove = removeEvent.listen
+  observable.onMove = moveEvent.listen
+
+  observable.getKey = function (source) {
+    var value = resolve(source)
+    return matcher(value)
+  }
+
   observable.push = function (item) {
     var result = null
     if (arguments.length === 1) {
@@ -50,7 +64,16 @@ function TypedCollection (ctor, opts) {
     }
     binder.broadcast()
 
-    onAdd && Array.isArray(result) ? result.forEach(onAdd) : onAdd(result)
+    if (Array.isArray(result)) {
+      result.forEach(function (item) {
+        onAdd && onAdd(item)
+        addEvent.broadcast(item)
+      })
+    } else {
+      onAdd && onAdd(result)
+      addEvent.broadcast(result)
+    }
+
     return result
   }
 
@@ -73,6 +96,7 @@ function TypedCollection (ctor, opts) {
     binder.broadcast()
 
     onAdd && onAdd(source)
+    addEvent.broadcast(source)
     return source
   }
 
@@ -84,6 +108,7 @@ function TypedCollection (ctor, opts) {
     binder.broadcast()
 
     onRemove && onRemove(source)
+    removeEvent.broadcast(source)
     return source
   }
 
@@ -95,6 +120,7 @@ function TypedCollection (ctor, opts) {
     binder.broadcast()
 
     onRemove && onRemove(source)
+    removeEvent.broadcast(source)
     return source
   }
 
@@ -114,6 +140,7 @@ function TypedCollection (ctor, opts) {
         object.splice(currentIndex + 1, 1)
       }
       binder.broadcast()
+      moveEvent.broadcast(source)
     }
   }
 
@@ -125,7 +152,10 @@ function TypedCollection (ctor, opts) {
     object.length = 0
     sources.length = 0
     binder.broadcast()
-    onRemove && toRemove.forEach(onRemove)
+    toRemove.forEach(function (source) {
+      onRemove && onRemove(source)
+      removeEvent.broadcast(source)
+    })
   }
 
   observable.delete = function (valueOrObs) {
@@ -142,6 +172,7 @@ function TypedCollection (ctor, opts) {
       triggerRelease(key)
       binder.broadcast()
       onRemove && onRemove(source)
+      removeEvent.broadcast(source)
     }
   }
 
@@ -189,7 +220,10 @@ function TypedCollection (ctor, opts) {
     binder.broadcast() 
 
     onAdd && added.forEach(onAdd)
+    added.forEach(addEvent.broadcast)
     onRemove && removed.forEach(onRemove)
+    removed.forEach(removeEvent.broadcast)
+    // TODO: handle moved items??
   }
 
   return observable

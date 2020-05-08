@@ -112,7 +112,10 @@ test('typed-collection', function(t) {
   ])
   added.length = 0
 
+  let addCount = 0
+  const removeAddListener = state.onAdd((item) => {addCount += 1})
   state.push({id: 3, type: 'Dog', age: 2})
+  t.equal(addCount, 1, 'onAdd listener got event')
 
   t.deepEqual(added.map(resolve), [
     {id: 3, age: 2, type: 'Dog'}
@@ -126,6 +129,10 @@ test('typed-collection', function(t) {
   ], 'Item pushed')
 
   added.length = 0
+
+  removeAddListener()
+  state.push({id: 4, type: 'Dog', age: 2})
+  t.equal(addCount, 1, 'onAdd not called after remove listener')
 
   t.end()
 })
