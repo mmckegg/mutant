@@ -40,5 +40,7 @@ module.exports = {
   'onceTrue': require('./once-true'),
   'resolve': require('./resolve'),
   'channel': require('./channel'),
+  'watchEvent': require('./watch-event'),
+  'watchAnimationFrame': require('./watch-animation-frame'),
   'send': require('./send')
 }
