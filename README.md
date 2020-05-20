@@ -471,6 +471,7 @@ Almost all of the properties work the same way they do when create DOM elements 
 - `classList`: You can specify an array of classes when creating the element, and the individual classes can be observables. e.g. `h('div', {classList: ['class', when(value, 'a', 'b')]})`
 - `events`: Due to the way observables work in Mutant (they're just functions), unfortunately you can't use the `onclick` style properties to add event handlers (unless wrapped with an observable). You instead add events using the `events` property or the `ev-eventname` shorthand. e.g. `h('div', {events: {click: clickHandler}})` or `h('div', {'ev-click': clickHandler})`
 - `styles`: This uses the CSS attribute names of styles (e.g. 'text-align' instead of 'textAlign'). Each value can be it's own observable, allowing you to tie specific styles directly to state e.g. `h('div', {styles: {'color': 'red', 'margin-top': when(spacedOut, '10px', '0px')}})`
+- `hooks`: Specify functions to be run on this element when added and removed from the DOM. Can be used to add custom behaviors, see section below for more info.
 
 You can also specify an `intersectionBindingViewport` on scrolling elements if you would like the elements to only be bound (live) when they are in the viewport. You can specify `true` or `{rootMargin: VALUE}`. See [Intersection Observer API - rootMargin](https://developer.mozilla.org/en-US/docs/Web/API/IntersectionObserver/rootMargin) for details.
 
@@ -514,6 +515,44 @@ function sharedHandler (options) {
 }
 ```
 
+#### Hooks
+
+Hooks allow you to add special behaviors to elements. You can use the for data-binding, or custom components, or even merging in other view/templating libraries.
+
+Please note that hooks are not run until the element is actually in the DOM. If the same element is added and removed, the hooks will be run multiple times.
+
+In this example, we use hooks to bind an input element to state:
+
+```js
+var h = require('mutant/h')
+var watch = require('mutant/watch')
+var Value = require('mutant/value')
+var watchEvent = require('mutant/watch-event')
+
+var value = Value('default')
+var input = h('input', {type: 'text', hooks: [ValueHook(value)]})
+
+function ValueHook (observable) {
+  return function (element) {
+    // this function is run when the element is added to the DOM
+    var unwatch = watch(observable, function (value) {
+      element.value = value
+    })
+
+    var unwatchElement = watchEvent(element, 'input', function () {
+      observable.set(element.value)
+    })
+
+    return function onRemove () {
+      // this function is called when the element is removed from the DOM
+      // we'll use it to clean up our event handlers
+      unwatch()
+      unwatchElement()
+    }
+  }
+}
+```
+
 
 ### SvgElement / svg
 
@@ -528,21 +567,57 @@ let element = svg('svg', { width: 400, height: 300 }, [
 document.body.append(element)
 ```
 
-### watchAll
-
-...
-
-
-### watchThrottle
-
-...
-
-
 ### watch
 
 - This is a generic sink. Almost the same as listening to a value using `value(function (v) { })` except that it emits the initial value too.
-- It also accepts non-observable objects and will just emit their value once and then never all again. Kind of like Promise.resolve(). (I think, never used promises)
+- It also accepts non-observable objects and will just emit their value once and then never all again.
 
+```js
+const {Value, watch} = require('mutant')
+
+var obs = Value('observable')
+
+// immediately logs out the current value
+var unwatch = watch(obs, (value) => {
+  console.log(value)
+})
+
+// logs out again
+obs.set('new value')
+
+// stop watching
+unwatch()
+
+// this no longer logs out
+obs.set('new value')
+
+// watching a non observable object just runs once
+var notObs = 'plain old value'
+watch(notObs, (value) => {
+  console.log(value)
+})
+```
+
+### watchAll
+
+Just like watch, except you can provide an array of values to watch and they will all be outputted. Kind of like computed.
+
+### watchThrottle
+
+Just like watch except has an additional `throttle' param that allows you to prevent the watcher from being called faster than the specified duration.
+
+```js
+var value = Value()
+
+// change the value once every 50ms
+setInterval(() => {
+  value.set(Date.now())
+}, 50)
+
+watchThrottle(value, 200, (v) => {
+  // only called a maximum of once every 200 ms
+})
+```
 
 ---
 
@@ -557,6 +632,8 @@ A lot of these are used internally, but are useful more generally
 - isObservable
 - onceIdle
 - resolve
+- watchAnimationFrame
+- watchEvent
 - send 
 
 ### channel 
@@ -571,20 +648,29 @@ Creates an observable like object for broadcasting events with no permanent stat
   channel.broadcast('value')
 ```
 
-### forEachPair
-
-...
-
-
 ### forEach
 
-...
+You can run this on ordinary or observable objects, and it will loop over every item. Mostly just a convenience function to make it easier to work with different kinds of objects (almost but not quite `resolve(obj).forEach`).
 
+### forEachPair
+
+Like `forEach` above, except can be used on `Dict` / lookup objects to loop over every key and value pair.
 
 ### isObservable
 
-...
+Returns true if the provided object is likely to be an observable. This isn't a perfect check however, as observables in mutant are defined as functions that have exactly one argument.
 
+```js
+const {Value, isObservable} = require('mutant')
+var obs = Value('observable')
+var notObs = 'plain old value'
+
+isObservable(obs) // => true
+isObservable(notObs) // => true
+
+// WATCH OUT
+isObservable(isObservable) // => true (YES, THAT's RIGHT, WATCH OUT FOR THIS!!! Functions with a single argument are detected as observables -- hopefully addressed with a big mutant rewrite one day)
+```
 
 ### onceIdle
 
@@ -601,13 +687,55 @@ onceIdle(function () {
 
 ### resolve
 
-...
+A convenience function that gets the value of an observable, or just returns the value if not an observable. Handy when you don't know if the value you are dealing with is an observable or not.
+
+```js
+const {Value, resolve} = require('mutant')
+
+function printValue (valueOrObservable) {
+  console.log(resolve(valueOrObservable))
+}
+
+// both of these print out their values
+printValue('Hello')
+printValue(Value('world'))
+```
+
+### watchAnimationFrame
+
+A convenience wrapper around `window.requestAnimationFrame`. Quickly set up an animation loop (listener gets called every frame), and returns a function that can be called to stop the loop. Very useful with hooks.
+
+```js
+var watchAnimationFrame = require('mutant/watch-animation-frame') // or const {watchAnimationFrame, h} = require('mutant')
+var unwatch = watchAnimationFrame(element, 'click', function (ev) {
+  // this is called ~60 times a second!
+})
+
+// until you call the unwatch function, which stops the loop:
+unwatch()
+```
+
+### watchEvent
+
+A convenience wrapper around `element.addEventListener`. Allows you to observe an event changing, but returns a function that can be called to remove the event handler. Very useful with hooks.
+
+```js
+var watchEvent = require('mutant/watch-event') // or const {watchEvent, h} = require('mutant')
+var element = h('div', 'Hello!')
+var unwatch = watchEvent(element, 'click', function (ev) {
+  // do stuff
+})
+
+// clean up event handler
+unwatch()
+```
+
+See the [hooks example](#hooks) above under [HtmlElement](#htmlelement--h) for more a more realistic use case!
 
 
 ### send
 
-...
-
+Used to create memory efficient event handlers. See [Events example under HtmlElement](#events).
 
 
 ---
