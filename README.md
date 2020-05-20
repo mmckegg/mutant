@@ -458,11 +458,61 @@ var element = h('div', {style: {'text-align': textAlign}}, [
 
 A fancy wrapper around `document.createElement()` that allows you to create DOM elements (entire trees if needed) without setting lots of properties or writing html. It just returns plain old DOM elements that can be added directly to the DOM.
 
-This is basically just [hyperscript](https://github.com/dominictarr/hyperscript) with a bunch of small tweaks and enhanced binding ability.
+This follows [hyperscript](https://github.com/dominictarr/hyperscript) syntax: `h('tagName', {...properties}, [childNodes])`. The properties section is optional.
 
 You can add observables as properties and when the observable value changes, the DOM magically updates. You can also return **one or more DOM elements**. Cleanup is automatic (when removed from DOM using `MutationObserver`). It's a lot like pull streams: the DOM acts as a sink. **If an element created by mutant is not in the DOM, it doesn't listen to its observable properties.** It only resolves them once it is added, and if it is removed unlistens again.
 
-You can also specify an `intersectionBindingViewport` on scrolling elements if you would like the elements to only be bound (live) when they are in the viewport. You can specify `true` or `{rootMargin}`. See [Intersection Observer API - rootMargin](https://developer.mozilla.org/en-US/docs/Web/API/IntersectionObserver/rootMargin) for details.
+#### Properties
+
+It is important to note that you are specifying **properties** not attributes. So you use the DOM name instead of the HTML name. For example `className` instead of `class`. Or `playsInline` instead of `playsinline`. Check out this stack overflow topic for more info: [What is the difference between properties and attributes in HTML?](https://stackoverflow.com/questions/6003819/what-is-the-difference-between-properties-and-attributes-in-html).
+
+Almost all of the properties work the same way they do when create DOM elements using `document.createElement`, but there are a few special differences:
+
+- `classList`: You can specify an array of classes when creating the element, and the individual classes can be observables. e.g. `h('div', {classList: ['class', when(value, 'a', 'b')]})`
+- `events`: Due to the way observables work in Mutant (they're just functions), unfortunately you can't use the `onclick` style properties to add event handlers (unless wrapped with an observable). You instead add events using the `events` property or the `ev-eventname` shorthand. e.g. `h('div', {events: {click: clickHandler}})` or `h('div', {'ev-click': clickHandler})`
+- `styles`: This uses the CSS attribute names of styles (e.g. 'text-align' instead of 'textAlign'). Each value can be it's own observable, allowing you to tie specific styles directly to state e.g. `h('div', {styles: {'color': 'red', 'margin-top': when(spacedOut, '10px', '0px')}})`
+
+You can also specify an `intersectionBindingViewport` on scrolling elements if you would like the elements to only be bound (live) when they are in the viewport. You can specify `true` or `{rootMargin: VALUE}`. See [Intersection Observer API - rootMargin](https://developer.mozilla.org/en-US/docs/Web/API/IntersectionObserver/rootMargin) for details.
+
+#### Events
+
+As mentioned above, you can't use the `onclick` style events, instead you must add them using `events` or `ev-click` style handlers. This is equivalent to `element.addEventListener`.
+
+```js
+var element = h('div', {
+  events: {
+    click: function (ev) {
+      // this works just like the handler on addEventListener
+    }
+  }
+})
+```
+
+Or using shorthand:
+
+```js
+var element = h('div', {
+  'ev-click': function (ev) {
+    // this works just like the handler on addEventListener
+  }
+)
+```
+
+However this method can use a lot of memory if you are adding events to many different elements. If the event handlers are the same, but specified inline every time, this is a waste. Here's how you can optimise this with `send`:
+
+```js
+var send = require('mutant/send') // or const {h, send} = require('mutant')
+
+var element = h('div', {
+  'ev-click': send(sharedHandler, {options})
+)
+
+function sharedHandler (options) {
+  // handle the event here
+  // send already calls `preventDefault`
+  // you can access the raw event using this.event
+}
+```
 
 
 ### SvgElement / svg
