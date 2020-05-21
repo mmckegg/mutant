@@ -1,3 +1,5 @@
+var requestIdleCallback = require('request-idle-callback').requestIdleCallback
+
 var queue = []
 var running = false
 var max = 1000 / 60
@@ -9,7 +11,7 @@ module.exports = function (fn) {
   queue.push(fn)
   if (!running) {
     running = true
-    window.requestIdleCallback(flush)
+    requestIdleCallback(flush)
   }
 }
 
@@ -21,7 +23,7 @@ function flush () {
   }
 
   if (queue.length) {
-    window.requestIdleCallback(flush)
+    requestIdleCallback(flush)
   } else {
     running = false
   }
